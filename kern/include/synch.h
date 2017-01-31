@@ -74,12 +74,22 @@ void V(struct semaphore *);
  */
 struct lock {
         char *lk_name;
-        // add what you need here
-        // (don't forget to mark things volatile as needed)
+        // If the lock is, well, locked.
+        volatile int is_locked;
 };
 
-struct lock *lock_create(const char *name);
-void lock_destroy(struct lock *);
+struct lock *lock_create(const char *name) {
+        // Create the lock
+        lock l = {.lk_name = name, .is_locked = 0}; 
+        
+        // Return the mem address for the lock for a pointer.
+        return &l;
+}
+
+void lock_destroy(struct lock *) {
+        // Delete the lock
+        delete lock;
+}
 
 /*
  * Operations:
@@ -94,7 +104,11 @@ void lock_destroy(struct lock *);
  */
 void lock_acquire(struct lock *);
 void lock_release(struct lock *);
-bool lock_do_i_hold(struct lock *);
+
+bool lock_do_i_hold(struct lock *) {
+        // Return if the lock is currently locked or not.
+        return lock->is_locked == 1; 
+}
 
 
 /*
@@ -149,8 +163,10 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
 
 struct rwlock {
         char *rwlock_name;
-        // add what you need here
-        // (don't forget to mark things volatile as needed)
+        // If the lock is, well, locked.
+        volatile int is_locked;
+        // If the lock is read mode, then == 1; write mode is 0.
+        int read_mode;
 };
 
 struct rwlock * rwlock_create(const char *);
