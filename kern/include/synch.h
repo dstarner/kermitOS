@@ -50,8 +50,14 @@ struct semaphore {
 	volatile unsigned sem_count;
 };
 
-struct semaphore *sem_create(const char *name, unsigned initial_count);
-void sem_destroy(struct semaphore *);
+struct semaphore *sem_create(const char *name, unsigned initial_counti) {
+        semaphore sem = {.sem_name = name, .sem_count=initial_counti}
+}
+
+void sem_destroy(struct semaphore *) {
+        // Delete the semaphore
+        delete semaphore;
+}
 
 /*
  * Operations (both atomic):
@@ -59,8 +65,20 @@ void sem_destroy(struct semaphore *);
  *                   the count is 1 again before decrementing.
  *     V (verhogen): increment count.
  */
-void P(struct semaphore *);
-void V(struct semaphore *);
+void P(struct semaphore *) {
+        // Wait while the count is zero
+        // This is okay because sem_count is volatile
+        while(semaphore->sem_count == 0) {
+                // Block this bitch
+        }
+        // Decrement when the count != 0
+        semaphore->sem_count--;
+}
+
+void V(struct semaphore *) {
+        // Increment count
+        semaphore->sem_count++;
+}
 
 
 /*
