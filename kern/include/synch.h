@@ -51,7 +51,7 @@ struct semaphore {
 };
 
 struct semaphore *sem_create(const char *name, unsigned initial_counti) {
-        semaphore sem = {.sem_name = name, .sem_count=initial_counti}
+        semaphore sem = {.sem_name = name, .sem_count=initial_counti};
 }
 
 void sem_destroy(struct semaphore *) {
