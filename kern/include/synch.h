@@ -37,10 +37,6 @@
 
 #include <spinlock.h>
 
-/*
- * Helpers
- */
-int test_and_set(lock *lock, int val);
 
 /*
  * Dijkstra-style semaphore.
@@ -188,5 +184,10 @@ void rwlock_release_read(struct rwlock *lock);
 void rwlock_acquire_write(struct rwlock *lock);
 
 void rwlock_release_write(struct rwlock *lock);
+
+/*
+ * Helpers
+ */
+int test_and_set(lock *lock, int val);
 
 #endif /* _SYNCH_H_ */
