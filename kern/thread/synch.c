@@ -212,7 +212,7 @@ lock_do_i_hold(struct lock *lock)
 	// Return if the lock is held or not.
 	// This may not be correct
 	// You may have to check if test and set returns the same/different
-	return lock.held;
+	return lock->held;
 }
 
 ////////////////////////////////////////////////////////////

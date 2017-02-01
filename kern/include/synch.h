@@ -38,6 +38,11 @@
 #include <spinlock.h>
 
 /*
+ * Helpers
+ */
+int test_and_set(lock *lock, int val);
+
+/*
  * Dijkstra-style semaphore.
  *
  * The name field is for easier debugging. A copy of the name is made
