@@ -42,6 +42,16 @@
 
 ////////////////////////////////////////////////////////////
 //
+// Helpers
+
+int test_and_set(lock *lock, int val) {
+    int old = lock->held;
+    lock->held = val;
+    return old;
+}
+
+////////////////////////////////////////////////////////////
+//
 // Semaphore.
 
 struct semaphore *
@@ -143,11 +153,13 @@ lock_create(const char *name)
 {
 	struct lock *lock;
 
+	// Create the lock, return if null
 	lock = kmalloc(sizeof(*lock));
 	if (lock == NULL) {
 		return NULL;
 	}
 
+	// Give name to lock, free if no name
 	lock->lk_name = kstrdup(name);
 	if (lock->lk_name == NULL) {
 		kfree(lock);
@@ -155,6 +167,7 @@ lock_create(const char *name)
 	}
 
 	// add stuff here as needed
+
 
 	return lock;
 }
@@ -166,6 +179,7 @@ lock_destroy(struct lock *lock)
 
 	// add stuff here as needed
 
+
 	kfree(lock->lk_name);
 	kfree(lock);
 }
@@ -173,27 +187,25 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock)
 {
-	// Write this
+	// Spin while the lock is held
+    while(test_and_set(lock, 1) == 1);
 
-	(void)lock;  // suppress warning until code gets written
 }
 
 void
 lock_release(struct lock *lock)
 {
-	// Write this
-
-	(void)lock;  // suppress warning until code gets written
+	// "Unlock the door."
+    test_and_set(lock, 0);
 }
 
 bool
 lock_do_i_hold(struct lock *lock)
 {
-	// Write this
-
-	(void)lock;  // suppress warning until code gets written
-
-	return true; // dummy until code gets written
+	// Return if the lock is held or not.
+	// This may not be correct
+	// You may have to check if test and set returns the same/different
+	return lock.held;
 }
 
 ////////////////////////////////////////////////////////////

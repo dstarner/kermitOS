@@ -77,7 +77,7 @@ void V(struct semaphore *sema);
 struct lock {
         char *lk_name;
         // If the lock is, well, locked.
-        volatile int is_locked;
+        volatile int held;
 };
 
 struct lock *lock_create(const char *name);
@@ -118,8 +118,9 @@ bool lock_do_i_hold(struct lock *l);
 
 struct cv {
         char *cv_name;
-        // add what you need here
-        // (don't forget to mark things volatile as needed)
+
+	    // {full: 2, empty: 1, neither:0}
+	    volatile int state;
 };
 
 struct cv *cv_create(const char *name);
