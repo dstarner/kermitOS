@@ -187,6 +187,9 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock)
 {
+
+	KASSERT(lock != NULL);
+
 	// Spin while the lock is held
     while(test_and_set(lock, 1) == 1);
 
@@ -195,6 +198,8 @@ lock_acquire(struct lock *lock)
 void
 lock_release(struct lock *lock)
 {
+	KASSERT(lock != NULL);
+
 	// "Unlock the door."
     test_and_set(lock, 0);
 }
@@ -202,6 +207,8 @@ lock_release(struct lock *lock)
 bool
 lock_do_i_hold(struct lock *lock)
 {
+	KASSERT(lock != NULL);
+
 	// Return if the lock is held or not.
 	// This may not be correct
 	// You may have to check if test and set returns the same/different
