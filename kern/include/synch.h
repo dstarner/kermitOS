@@ -50,14 +50,9 @@ struct semaphore {
 	volatile unsigned sem_count;
 };
 
-struct semaphore *sem_create(const char *name, unsigned initial_counti) {
-        semaphore sem = {.sem_name = name, .sem_count=initial_counti};
-}
+struct semaphore *sem_create(const char *name, unsigned initial_counti);
 
-void sem_destroy(struct semaphore *) {
-        // Delete the semaphore
-        delete semaphore;
-}
+void sem_destroy(struct semaphore *sema);
 
 /*
  * Operations (both atomic):
@@ -65,20 +60,9 @@ void sem_destroy(struct semaphore *) {
  *                   the count is 1 again before decrementing.
  *     V (verhogen): increment count.
  */
-void P(struct semaphore *) {
-        // Wait while the count is zero
-        // This is okay because sem_count is volatile
-        while(semaphore->sem_count == 0) {
-                // Block this bitch
-        }
-        // Decrement when the count != 0
-        semaphore->sem_count--;
-}
+void P(struct semaphore *sema);
 
-void V(struct semaphore *) {
-        // Increment count
-        semaphore->sem_count++;
-}
+void V(struct semaphore *sema);
 
 
 /*
@@ -96,18 +80,9 @@ struct lock {
         volatile int is_locked;
 };
 
-struct lock *lock_create(const char *name) {
-        // Create the lock
-        lock l = {.lk_name = name, .is_locked = 0}; 
-        
-        // Return the mem address for the lock for a pointer.
-        return &l;
-}
+struct lock *lock_create(const char *name);
 
-void lock_destroy(struct lock *) {
-        // Delete the lock
-        delete lock;
-}
+void lock_destroy(struct lock *l);
 
 /*
  * Operations:
@@ -120,13 +95,11 @@ void lock_destroy(struct lock *) {
  *
  * These operations must be atomic. You get to write them.
  */
-void lock_acquire(struct lock *);
-void lock_release(struct lock *);
+void lock_acquire(struct lock *l);
 
-bool lock_do_i_hold(struct lock *) {
-        // Return if the lock is currently locked or not.
-        return lock->is_locked == 1; 
-}
+void lock_release(struct lock *l);
+
+bool lock_do_i_hold(struct lock *l);
 
 
 /*
@@ -150,7 +123,7 @@ struct cv {
 };
 
 struct cv *cv_create(const char *name);
-void cv_destroy(struct cv *);
+void cv_destroy(struct cv *lock);
 
 /*
  * Operations:
@@ -181,14 +154,14 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
 
 struct rwlock {
         char *rwlock_name;
-        // If the lock is, well, locked.
-        volatile int is_locked;
-        // If the lock is read mode, then == 1; write mode is 0.
-        int read_mode;
+        // Locks for the two conditions
+        volatile unsigned read_lock;
+        volatile unsigned write_lock;
 };
 
-struct rwlock * rwlock_create(const char *);
-void rwlock_destroy(struct rwlock *);
+struct rwlock * rwlock_create(const char *name);
+
+void rwlock_destroy(struct rwlock *lock);
 
 /*
  * Operations:
@@ -202,9 +175,12 @@ void rwlock_destroy(struct rwlock *);
  * These operations must be atomic. You get to write them.
  */
 
-void rwlock_acquire_read(struct rwlock *);
-void rwlock_release_read(struct rwlock *);
-void rwlock_acquire_write(struct rwlock *);
-void rwlock_release_write(struct rwlock *);
+void rwlock_acquire_read(struct rwlock *lock);
+
+void rwlock_release_read(struct rwlock *lock);
+
+void rwlock_acquire_write(struct rwlock *lock);
+
+void rwlock_release_write(struct rwlock *lock);
 
 #endif /* _SYNCH_H_ */
