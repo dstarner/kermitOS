@@ -44,9 +44,9 @@
 //
 // Helpers
 
-int test_and_set(lock *lock, int val) {
-    int old = lock->held;
-    lock->held = val;
+int test_and_set(struct lock *l, int val) {
+    int old = l->held;
+    l->held = val;
     return old;
 }
 
@@ -191,7 +191,7 @@ lock_acquire(struct lock *lock)
 	KASSERT(lock != NULL);
 
 	// Spin while the lock is held
-    while(test_and_set(lock, 1) == 1);
+        while(test_and_set(lock, 1) == 1);
 
 }
 
@@ -201,7 +201,7 @@ lock_release(struct lock *lock)
 	KASSERT(lock != NULL);
 
 	// "Unlock the door."
-    test_and_set(lock, 0);
+        test_and_set(lock, 0);
 }
 
 bool

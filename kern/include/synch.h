@@ -188,6 +188,6 @@ void rwlock_release_write(struct rwlock *lock);
 /*
  * Helpers
  */
-int test_and_set(lock *lock, int val);
+int test_and_set(struct lock *l, int val);
 
 #endif /* _SYNCH_H_ */
