@@ -76,9 +76,13 @@ void V(struct semaphore *sema);
  * (should be) made internally.
  */
 struct lock {
-        char *lk_name;
-        // If the lock is, well, locked.
-        volatile int held;
+	char *lk_name;
+    // The thread that currently has the lock
+	struct thread *lk_thread;
+	// The wait channel
+	struct wchan *lk_wchan;
+	// The spinlock
+	struct spinlock *lk_spinlock;
 };
 
 struct lock *lock_create(const char *name);
@@ -185,9 +189,5 @@ void rwlock_acquire_write(struct rwlock *lock);
 
 void rwlock_release_write(struct rwlock *lock);
 
-/*
- * Helpers
- */
-int test_and_set(struct lock *l, int val);
 
 #endif /* _SYNCH_H_ */

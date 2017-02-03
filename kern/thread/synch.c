@@ -40,6 +40,8 @@
 #include <current.h>
 #include <synch.h>
 
+// curthread gives the current thread
+
 ////////////////////////////////////////////////////////////
 //
 // Helpers
@@ -168,6 +170,17 @@ lock_create(const char *name)
 
 	// add stuff here as needed
 
+	// Create the wait channel
+	lock->lk_wchan = wchan_create(lock->lk_name);
+	if (lock->lk_wchan == NULL) {  // Delete if something goes wrong
+		kfree(lock->lk_name);
+		kfree(lock);
+		return NULL;
+	}
+
+	// Initialize the spinlock for the lock.
+	lock->lk_spinlock = spinlock_int(&lock->lk_spinlock);
+
 
 	return lock;
 }
@@ -178,6 +191,7 @@ lock_destroy(struct lock *lock)
 	KASSERT(lock != NULL);
 
 	// add stuff here as needed
+	// If there is a thread currently using the lock, PANIC!
 
 
 	kfree(lock->lk_name);
@@ -190,9 +204,6 @@ lock_acquire(struct lock *lock)
 
 	KASSERT(lock != NULL);
 
-	// Spin while the lock is held
-        while(test_and_set(lock, 1) == 1);
-
 }
 
 void
@@ -200,19 +211,17 @@ lock_release(struct lock *lock)
 {
 	KASSERT(lock != NULL);
 
-	// "Unlock the door."
-        test_and_set(lock, 0);
+
 }
 
+// This function is done.
 bool
 lock_do_i_hold(struct lock *lock)
 {
 	KASSERT(lock != NULL);
 
 	// Return if the lock is held or not.
-	// This may not be correct
-	// You may have to check if test and set returns the same/different
-	return lock->held;
+	return lock->lk_thread == curthread;
 }
 
 ////////////////////////////////////////////////////////////
