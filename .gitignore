@@ -10,3 +10,7 @@ build
 /root/
 *.swo
 *.swp
+
+CMakeLists.txt
+.idea/
+cmake-build-debug
