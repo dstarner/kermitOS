@@ -235,6 +235,8 @@ lock_release(struct lock *lock)
     // Release current thread
 	lock->lk_thread = NULL;
 
+	KASSERT(lock->lk_thread == NULL);
+
 	// Wake up a spinlock
 	wchan_wakeone(lock->lk_wchan, &lock->lk_spinlock);
 
