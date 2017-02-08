@@ -44,16 +44,6 @@
 
 ////////////////////////////////////////////////////////////
 //
-// Helpers
-
-int test_and_set(struct lock *l, int val) {
-    int old = l->held;
-    l->held = val;
-    return old;
-}
-
-////////////////////////////////////////////////////////////
-//
 // Semaphore.
 
 struct semaphore *
@@ -192,7 +182,9 @@ lock_destroy(struct lock *lock)
 
 	// add stuff here as needed
 	// If there is a thread currently using the lock, PANIC!
-
+	/* wchan_cleanup will assert if anyone's waiting on it */
+	spinlock_cleanup(&lock->lk_spinlock);
+	wchan_destroy(lock->lk_wchan);
 
 	kfree(lock->lk_name);
 	kfree(lock);
@@ -204,6 +196,32 @@ lock_acquire(struct lock *lock)
 
 	KASSERT(lock != NULL);
 
+    /*
+	 * May not block in an interrupt handler.
+	 *
+	 * For robustness, always check, even if we can actually
+	 * complete the P without blocking.
+	 */
+    KASSERT(curthread->t_in_interrupt == false);
+
+    // Aquire spinlock
+    spinlock_acquire(&lock->lk_spinlock);
+
+	// If not in control of the spinlock, sleep
+	// TODO: This condition might not be correct
+	while (lock->lk_thread != NULL) {
+
+		// Have the spinlock sleep
+		wchan_sleep(lock->lk_wchan, &lock->lk_spinlock);
+
+	}
+
+	// Set the current thread.
+	lock->lk_thread = curthread;
+
+	// Release the spinlock
+	spinlock_release(&lock->lk_spinlock);
+
 }
 
 void
@@ -211,10 +229,20 @@ lock_release(struct lock *lock)
 {
 	KASSERT(lock != NULL);
 
+	// Aquire spinlock
+	spinlock_acquire(&lock->lk_spinlock);
+
+    // Release current thread
+	lock->lk_thread = NULL;
+
+	// Wake up a spinlock
+	wchan_wakeone(lock->lk_wchan, &lock->lk_spinlock);
+
+	// Release the spinlock
+	spinlock_release(&lock->lk_spinlock);
 
 }
 
-// This function is done.
 bool
 lock_do_i_hold(struct lock *lock)
 {

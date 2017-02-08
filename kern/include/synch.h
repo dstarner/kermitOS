@@ -160,9 +160,13 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
 
 struct rwlock {
         char *rwlock_name;
-        // Locks for the two conditions
-        volatile unsigned read_lock;
-        volatile unsigned write_lock;
+		// The spinlock
+		struct spinlock *lk_spinlock;
+		// Reading buffer
+    	volatile int buf_read;
+		// Reading/Writer buffer
+		volatile int buf_glob;
+
 };
 
 struct rwlock * rwlock_create(const char *name);
