@@ -293,6 +293,13 @@ cv_destroy(struct cv *cv)
 void
 cv_wait(struct cv *cv, struct lock *lock)
 {
+        // Release the lock
+        
+        // Put thread to sleep on cv's wait channel till signalled
+
+
+        // Reaquire lock
+
 	// Write this
 	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
@@ -301,6 +308,12 @@ cv_wait(struct cv *cv, struct lock *lock)
 void
 cv_signal(struct cv *cv, struct lock *lock)
 {
+
+        // Caller must hold the lock (check curthread == lock->lk_thread)
+        // This lock must be the same as the lock that was used in 'wait' call.
+
+        // Wake one of the threads on the waitchannel
+
 	// Write this
 	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
@@ -309,6 +322,12 @@ cv_signal(struct cv *cv, struct lock *lock)
 void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {
+
+        // Caller must hold the lock (check curthread == lock->lk_thread)
+        // This lock must be the same as the lock that was used in 'wait' call.
+
+        // Wake all of the threads on the wait channel
+
 	// Write this
 	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
