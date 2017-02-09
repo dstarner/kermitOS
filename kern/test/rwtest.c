@@ -16,12 +16,30 @@
  * Use these stubs to test your reader-writer locks.
  */
 
+static struct rwlock *test_rwl = NULL;
+
+static bool test_status = TEST161_FAIL;
+
 int rwtest(int nargs, char **args) {
 	(void)nargs;
 	(void)args;
 
-	kprintf_n("rwt1 unimplemented\n");
-	success(TEST161_FAIL, SECRET, "rwt1");
+	test_rwl = rwlock_create("testlock");
+	if (test_rwl == NULL) {
+		panic("rwlock is null");
+	}
+	//
+	rwlock_acquire_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_release_read(test_rwl);
+
+	// kprintf_n("Should panic if successful...\n");
+	rwlock_destroy(test_rwl);
+	test_rwl = NULL;
+
+	test_status = TEST161_SUCCESS;
+	success(test_status, SECRET, "rwt1");
 
 	return 0;
 }
@@ -30,7 +48,17 @@ int rwtest2(int nargs, char **args) {
 	(void)nargs;
 	(void)args;
 
-	kprintf_n("rwt2 unimplemented\n");
+	test_rwl = rwlock_create("testlock");
+
+	rwlock_acquire_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_release_write(test_rwl);
+
+	// kprintf_n("Should panic if successful...\n");
+	rwlock_destroy(test_rwl);
+	test_rwl = NULL;
+
 	success(TEST161_FAIL, SECRET, "rwt2");
 
 	return 0;

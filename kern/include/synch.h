@@ -157,6 +157,10 @@ struct rwlock {
         char *rwlock_name;
         // add what you need here
         // (don't forget to mark things volatile as needed)
+				struct lock *rwlock_lock;
+				struct cv *rwlock_cv;
+				volatile int readers_count;
+				volatile int has_writer;
 };
 
 struct rwlock * rwlock_create(const char *);
