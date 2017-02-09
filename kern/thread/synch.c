@@ -274,7 +274,17 @@ cv_create(const char *name)
 		return NULL;
 	}
 
-	// add stuff here as needed
+	// Create the wait channel
+	cv->cv_wchan = wchan_create(cv->cv_name);
+	if (cv->cv_wchan == NULL) {  // Delete if something goes wrong
+		kfree(cv->cv_name);
+		kfree(cv);
+		return NULL;
+	
+        // Initialize the spinlock for the lock.
+	spinlock_init(&cv->cv_spinlock);
+
+        cv->cv_lock = NULL;
 
 	return cv;
 }
@@ -284,7 +294,9 @@ cv_destroy(struct cv *cv)
 {
 	KASSERT(cv != NULL);
 
-	// add stuff here as needed
+        // Check to make sure its in a good state
+	spinlock_cleanup(&cv->cv_spinlock);
+	wchan_destroy(cv->cv_wchan);
 
 	kfree(cv->cv_name);
 	kfree(cv);
@@ -294,11 +306,13 @@ void
 cv_wait(struct cv *cv, struct lock *lock)
 {
         // Release the lock
-        
+        lock_release(lock);        
+ 
         // Put thread to sleep on cv's wait channel till signalled
 
 
-        // Reaquire lock
+        // Reacquire lock
+        lock_acquire(lock);
 
 	// Write this
 	(void)cv;    // suppress warning until code gets written
@@ -313,6 +327,8 @@ cv_signal(struct cv *cv, struct lock *lock)
         // This lock must be the same as the lock that was used in 'wait' call.
 
         // Wake one of the threads on the waitchannel
+	wchan_wakeone(cv->cv_wchan, &cv->cv_spinlock);
+         
 
 	// Write this
 	(void)cv;    // suppress warning until code gets written

@@ -123,9 +123,15 @@ bool lock_do_i_hold(struct lock *l);
 
 struct cv {
         char *cv_name;
+	// The wait channel to wake/sleep
+        struct wchan *cv_wchan;
 
-	    // {full: 2, empty: 1, neither:0}
-	    volatile int state;
+        // The lock to check against
+        struct lock *cv_lock;
+	
+        // The spinlock
+	struct spinlock cv_spinlock;
+
 };
 
 struct cv *cv_create(const char *name);
