@@ -155,7 +155,7 @@ lock_create(const char *name)
 	}
 
 	// add stuff here as needed
-	// Create wait channel
+	// Create wchan
 	lock->lk_wchan = wchan_create(lock->lk_name);
 	if (lock->lk_wchan == NULL) {
 		// Free the memory if no wchan is created.
@@ -266,6 +266,16 @@ cv_create(const char *name)
 	}
 
 	// add stuff here as needed
+	// Create wchan
+	cv->cv_wchan = wchan_create(cv->cv_name);
+	if (cv->cv_wchan == NULL) {
+		kfree(cv->cv_name);
+		kfree(cv);
+		return NULL;
+	}
+
+	// Init spinlock for CV
+	spinlock_init(&cv->cv_lock);
 
 	return cv;
 }
@@ -285,22 +295,54 @@ void
 cv_wait(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	(void)cv;    // suppress warning until code gets written
-	(void)lock;  // suppress warning until code gets written
+	cv_sanity_check(cv, lock); // Run sanity check.
+
+	// Release the supplied lock, go to sleep, and then when you wake up re-acquire the lock.
+	spinlock_acquire(&cv->cv_lock);
+
+	lock_release(lock);
+	wchan_sleep(cv->cv_wchan, &cv->cv_lock);
+
+	spinlock_release(&cv->cv_lock);
+
+	// Reacquire the lock
+	lock_acquire(lock);
 }
 
 void
 cv_signal(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	(void)cv;    // suppress warning until code gets written
-	(void)lock;  // suppress warning until code gets written
+	cv_sanity_check(cv, lock); // Run sanity check.
+
+	// Make sure only 1 wchan is woken up at a time
+	spinlock_acquire(&cv->cv_lock);
+
+	wchan_wakeone(cv->cv_wchan, &cv->cv_lock); // Wake a thread on CV's wchan.
+
+	spinlock_release(&cv->cv_lock);
 }
 
 void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	(void)cv;    // suppress warning until code gets written
-	(void)lock;  // suppress warning until code gets written
+	cv_sanity_check(cv, lock); // Run sanity check.
+
+	spinlock_acquire(&cv->cv_lock);
+
+	wchan_wakeall(cv->cv_wchan, &cv->cv_lock); // Wake all threads on CV's wchan.
+
+	spinlock_release(&cv->cv_lock);
+}
+
+void
+cv_sanity_check(struct cv *cv, struct lock *lock)
+{
+	// Make sure components exist
+	KASSERT(cv != NULL);
+	KASSERT(lock != NULL);
+
+	// Make sure the lock is currently acquired by the CV
+	KASSERT(lock_do_i_hold(lock));
 }

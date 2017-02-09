@@ -118,6 +118,8 @@ struct cv {
         char *cv_name;
         // add what you need here
         // (don't forget to mark things volatile as needed)
+				struct wchan *cv_wchan;
+				struct spinlock cv_lock;
 };
 
 struct cv *cv_create(const char *name);
@@ -139,6 +141,7 @@ void cv_destroy(struct cv *);
 void cv_wait(struct cv *cv, struct lock *lock);
 void cv_signal(struct cv *cv, struct lock *lock);
 void cv_broadcast(struct cv *cv, struct lock *lock);
+void cv_sanity_check(struct cv *cv, struct lock *lock);
 
 /*
  * Reader-writer locks.
