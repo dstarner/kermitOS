@@ -158,8 +158,6 @@ lock_create(const char *name)
 		return NULL;
 	}
 
-	// add stuff here as needed
-
 	// Create the wait channel
 	lock->lk_wchan = wchan_create(lock->lk_name);
 	if (lock->lk_wchan == NULL) {  // Delete if something goes wrong
@@ -170,7 +168,9 @@ lock_create(const char *name)
 
 	// Initialize the spinlock for the lock.
 	spinlock_init(&lock->lk_spinlock);
-        
+       
+        // Initialize the current thread 
+        // holding the lock to null. 
         lock->lk_thread = NULL;
 
 
@@ -182,6 +182,8 @@ lock_destroy(struct lock *lock)
 {
 	KASSERT(lock != NULL);
 
+        // If there is a thread currently holding the lock, 
+        // then we fucked up
         KASSERT(lock->lk_thread == NULL);
 
 	// add stuff here as needed
@@ -222,7 +224,9 @@ void
 lock_release(struct lock *lock)
 {
 	KASSERT(lock != NULL);
-        
+       
+        // If the thread releasing the lock is not the 
+        // current thread, then we fucked up. 
         KASSERT(lock->lk_thread == curthread);
 
 	// Aquire spinlock
