@@ -155,6 +155,20 @@ lock_create(const char *name)
 	}
 
 	// add stuff here as needed
+	// Create wait channel
+	lock->lk_wchan = wchan_create(lock->lk_name);
+	if (lock->lk_wchan == NULL) {
+		// Free the memory if no wchan is created.
+		kfree(lock->lk_name);
+		kfree(lock);
+		return NULL;
+	}
+
+	// Initiate spinlock.
+	spinlock_init(&lock->lk_lock);
+
+	// Instantiate thread to null, to allow threads to acquire the lock.
+	lock->lk_thread = NULL;
 
 	return lock;
 }
@@ -164,7 +178,14 @@ lock_destroy(struct lock *lock)
 {
 	KASSERT(lock != NULL);
 
+	// Need to make sure the lock does not have any active threads before it
+	// is destroyed.
+	KASSERT(lock->lk_thread == NULL);
+
 	// add stuff here as needed
+	// Clean up memory when the lock is destroyed.
+	spinlock_cleanup(&lock->lk_lock);
+	wchan_destroy(lock->lk_wchan);
 
 	kfree(lock->lk_name);
 	kfree(lock);
@@ -174,26 +195,53 @@ void
 lock_acquire(struct lock *lock)
 {
 	// Write this
+	KASSERT(lock != NULL); // Make sure lock exists.
+	KASSERT(curthread->t_in_interrupt == false); // May not block in an interrupt handler.
 
-	(void)lock;  // suppress warning until code gets written
+	spinlock_acquire(&lock->lk_lock);
+
+	// Keep repeating while the lock has an active thread.
+	while	(lock->lk_thread != NULL) {
+		// Sleep all threads awaiting in the wait channel.
+		wchan_sleep(lock->lk_wchan, &lock->lk_lock);
+	}
+
+	// Change the current thread in lock to match the current thread running.
+	// The lock's current thread will be NULL at this point, but the wchan will
+	// have woken up one of the threads.
+	KASSERT(lock->lk_thread == NULL);
+	lock->lk_thread = curthread;
+
+	spinlock_release(&lock->lk_lock);
 }
 
 void
 lock_release(struct lock *lock)
 {
 	// Write this
+	KASSERT(lock != NULL);
 
-	(void)lock;  // suppress warning until code gets written
+	// Make sure only the thread who owns the lock can release it.
+	KASSERT(lock->lk_thread == curthread);
+
+	spinlock_acquire(&lock->lk_lock);
+
+	// Remove the current thread from the lock so the lock can be acquired.
+	lock->lk_thread = NULL;
+
+	// Wake a thread up to become the next current thread of the lock.
+	wchan_wakeone(lock->lk_wchan, &lock->lk_lock);
+
+	spinlock_release(&lock->lk_lock);
+
 }
 
 bool
 lock_do_i_hold(struct lock *lock)
 {
-	// Write this
-
-	(void)lock;  // suppress warning until code gets written
-
-	return true; // dummy until code gets written
+	// To check if the lock is held by a thread, check if the current global thread
+	// is the same thread as the one in the lock.
+	return curthread == lock->lk_thread;
 }
 
 ////////////////////////////////////////////////////////////
