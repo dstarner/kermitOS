@@ -82,7 +82,7 @@ struct lock {
 	// The wait channel
 	struct wchan *lk_wchan;
 	// The spinlock
-	struct spinlock *lk_spinlock;
+	struct spinlock lk_spinlock;
 };
 
 struct lock *lock_create(const char *name);
