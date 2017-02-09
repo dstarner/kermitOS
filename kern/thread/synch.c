@@ -170,6 +170,8 @@ lock_create(const char *name)
 
 	// Initialize the spinlock for the lock.
 	spinlock_init(&lock->lk_spinlock);
+        
+        lock->lk_thread = NULL;
 
 
 	return lock;
@@ -179,6 +181,8 @@ void
 lock_destroy(struct lock *lock)
 {
 	KASSERT(lock != NULL);
+
+        KASSERT(lock->lk_thread == NULL);
 
 	// add stuff here as needed
 	// If there is a thread currently using the lock, PANIC!
@@ -196,20 +200,11 @@ lock_acquire(struct lock *lock)
 
 	KASSERT(lock != NULL);
 
-    /*
-	 * May not block in an interrupt handler.
-	 *
-	 * For robustness, always check, even if we can actually
-	 * complete the P without blocking.
-	 */
-        KASSERT(curthread->t_in_interrupt == false);
-
         // Aquire spinlock
         spinlock_acquire(&lock->lk_spinlock);
 
 	// If not in control of the spinlock, sleep
 	while (lock->lk_thread != NULL) {
-
 		// Have the spinlock sleep
 		wchan_sleep(lock->lk_wchan, &lock->lk_spinlock);
 
@@ -228,7 +223,7 @@ lock_release(struct lock *lock)
 {
 	KASSERT(lock != NULL);
         
-        KASSERT(lock->lk_thread != NULL);
+        KASSERT(lock->lk_thread == curthread);
 
 	// Aquire spinlock
 	spinlock_acquire(&lock->lk_spinlock);
@@ -237,8 +232,6 @@ lock_release(struct lock *lock)
         // Release current thread
 	lock->lk_thread = NULL;
         
-
-
 	// Wake up a spinlock
 	wchan_wakeone(lock->lk_wchan, &lock->lk_spinlock);
 
