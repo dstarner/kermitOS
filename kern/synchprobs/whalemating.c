@@ -45,12 +45,34 @@
 // numbers are hit. You also need to keep track of the 
 // number of each type
 
+
+// GAMEPLAN:
+// 1. when X is called, increment X_num.
+// 2. If Y and Z have numbers greater than 0, then great! 
+//    they can all mate.
+
+
+// The number of each type
+unsigned int male_num; unsigned int female_num; unsigned int matchmaker_num;
+
+// The conditional variables for each
+struct cv* male_cv; struct cv* female_cv; struct cv* matchmaker_cv;
+
+
 /*
  * Called by the driver during initialization.
  */
 
 void whalemating_init() {
-	return;
+
+        // Create all of the cv's
+        male_cv = cv_create("Male");
+        female_cv = cv_create("Female");
+        matchmaker_cv = cv_create("Matchmaker");
+
+        // Make sure nothing blew up
+        KASSERT(male_cv != NULL && female_cv != NULL && matchmaker_cv != NULL);
+
 }
 
 /*
@@ -59,38 +81,65 @@ void whalemating_init() {
 
 void
 whalemating_cleanup() {
-	return;
+        // CLEAN IT ALL UP!!!
+        // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+        // ░░░░░░░▄▄▀▀▀▀▀▀▀▀▀▀▄▄█▄░░░░▄░░░░█░░░░░░░
+        // ░░░░░░█▀░░░░░░░░░░░░░▀▀█▄░░░▀░░░░░░░░░▄░
+        // ░░░░▄▀░░░░░░░░░░░░░░░░░▀██░░░▄▀▀▀▄▄░░▀░░
+        // ░░▄█▀▄█▀▀▀▀▄░░░░░░▄▀▀█▄░▀█▄░░█▄░░░▀█░░░░
+        // ░▄█░▄▀░░▄▄▄░█░░░▄▀▄█▄░▀█░░█▄░░▀█░░░░█░░░
+        // ▄█░░█░░░▀▀▀░█░░▄█░▀▀▀░░█░░░█▄░░█░░░░█░░░
+        // ██░░░▀▄░░░▄█▀░░░▀▄▄▄▄▄█▀░░░▀█░░█▄░░░█░░░
+        // ██░░░░░▀▀▀░░░░░░░░░░░░░░░░░░█░▄█░░░░█░░░
+        // ██░░░░░░░░░░░░░░░░░░░░░█░░░░██▀░░░░█▄░░░
+        // ██░░░░░░░░░░░░░░░░░░░░░█░░░░█░░░░░░░▀▀█▄
+        // ██░░░░░░░░░░░░░░░░░░░░█░░░░░█░░░░░░░▄▄██
+        // ░██░░░░░░░░░░░░░░░░░░▄▀░░░░░█░░░░░░░▀▀█▄
+        // ░▀█░░░░░░█░░░░░░░░░▄█▀░░░░░░█░░░░░░░▄▄██
+        // ░▄██▄░░░░░▀▀▀▄▄▄▄▀▀░░░░░░░░░█░░░░░░░▀▀█▄
+        // ░░▀▀▀▀░░░░░░░░░░░░░░░░░░░░░░█▄▄▄▄▄▄▄▄▄██
+        // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+        cv_destroy(male_cv);
+        cv_destroy(female_cv);
+        cv_destroy(matchmaker_cv);
 }
 
 void
 male(uint32_t index)
 {
-	(void)index;
-	/*
-	 * Implement this function by calling male_start and male_end when
-	 * appropriate.
-	 */
-	return;
+
+        male_start(index);
+
+        // All of the checking code below here
+
+
+        // ... and above here
+        male_end(index);
+
 }
 
 void
 female(uint32_t index)
 {
-	(void)index;
-	/*
-	 * Implement this function by calling female_start and female_end when
-	 * appropriate.
-	 */
-	return;
+        female_start(index);
+
+        // All of the checking code below here
+
+
+        // ... and above here
+        female_end(index);
+
 }
 
 void
 matchmaker(uint32_t index)
 {
-	(void)index;
-	/*
-	 * Implement this function by calling matchmaker_start and matchmaker_end
-	 * when appropriate.
-	 */
-	return;
+        matchmaking_start(index);
+
+        // All of the checking code below here
+
+
+        // ... and above here
+        matchmaking_end(index);
+
 }
