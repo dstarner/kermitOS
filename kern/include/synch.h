@@ -162,13 +162,18 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
  */
 
 struct rwlock {
-        char *rwlock_name;
-		// The spinlock
-		struct spinlock *lk_spinlock;
-		// Reading buffer
-    	volatile int buf_read;
-		// Reading/Writer buffer
-		volatile int buf_glob;
+        char *rw_name;
+        // The spinlock
+        struct lock *rw_lock;
+        
+        // Conditional 
+        struct cv *rw_cv;
+
+        // Readers waiting
+        volatile int b_read;
+
+        // Bool flag
+        volatile int w_wait;
 
 };
 

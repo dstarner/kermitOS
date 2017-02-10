@@ -369,3 +369,123 @@ cv_broadcast(struct cv *cv, struct lock *lock)
         spinlock_release(&cv->cv_spinlock);
 
 }
+
+
+///////////////////////////////////////////////////////
+// 
+//  RW Locks
+
+
+struct rwlock * 
+rwlock_create(const char *name) 
+{
+	struct rwlock *rw;
+
+	rw = kmalloc(sizeof(*rw));
+	if (rw == NULL) {
+		return NULL;
+	}
+
+	rw->rw_name = kstrdup(name);
+	if (rw->rw_name==NULL) {
+		kfree(rw);
+		return NULL;
+	}
+
+        // Create the cv
+        rw->rw_cv = cv_create(rw->rw_name); 
+
+        // Create the lock
+        rw->rw_lock = lock_create(rw->rw_name);
+
+        rw->b_read = 0;
+
+        rw->w_wait = 0;
+
+        return rw;
+}
+
+void 
+rwlock_destroy(struct rwlock *lock) 
+{
+
+        KASSERT(lock != NULL);
+
+        // Destroy essentials
+        cv_destroy(lock->rw_cv);
+        lock_destroy(lock->rw_lock);
+	
+        kfree(lock->rw_name);
+	kfree(lock);
+
+}
+
+void 
+rwlock_acquire_read(struct rwlock *lock)
+{
+
+        lock_acquire(lock->rw_lock);
+
+        // While something is currently writing
+        while(lock->w_wait == 1) {
+                // ... wait
+                cv_wait(lock->rw_cv, lock->rw_lock);
+        }
+
+        lock->b_read++;
+
+        lock_release(lock->rw_lock);
+
+}
+
+void 
+rwlock_release_read(struct rwlock *lock)
+{
+        
+        lock_acquire(lock->rw_lock);
+
+        // Decrement number of readers
+        lock->b_read--;
+
+        if (lock->b_read == 0) {
+        
+                // Signal on the CV
+                cv_signal(lock->rw_cv, lock->rw_lock);
+
+        }
+
+        lock_release(lock->rw_lock);
+
+}
+
+void
+rwlock_acquire_write(struct rwlock *lock)
+{
+        
+        lock_acquire(lock->rw_lock);
+        
+        // While something is currently writing or reading
+        while(lock->w_wait == 1 || lock->b_read > 0) {
+                // ... wait
+                cv_wait(lock->rw_cv, lock->rw_lock);
+        }
+
+        lock->w_wait = 1;
+
+        lock_release(lock->rw_lock);
+
+}
+
+void 
+rwlock_release_write(struct rwlock *lock)
+{
+
+        lock_acquire(lock->rw_lock);
+
+        lock->w_wait = 0;
+
+        cv_broadcast(lock->rw_cv, lock->rw_lock);
+
+        lock_release(lock->rw_lock);
+
+}
