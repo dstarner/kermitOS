@@ -280,11 +280,11 @@ cv_create(const char *name)
 		kfree(cv->cv_name);
 		kfree(cv);
 		return NULL;
-	
-        // Initialize the spinlock for the lock.
-	spinlock_init(&cv->cv_spinlock);
 
-        cv->cv_lock = NULL;
+        }
+	
+        // Initialize the spinlock for the cv.
+	spinlock_init(&cv->cv_spinlock);
 
 	return cv;
 }
@@ -305,46 +305,67 @@ cv_destroy(struct cv *cv)
 void
 cv_wait(struct cv *cv, struct lock *lock)
 {
+
+        // Make sure the lock is real and yours.
+        KASSERT(lock != NULL);
+        KASSERT(lock_do_i_hold(lock));        
+
+        // Make sure the cv exists
+        KASSERT(cv != NULL);
+
+        // Lock down the process
+        spinlock_acquire(&cv->cv_spinlock);
+
         // Release the lock
         lock_release(lock);        
- 
         // Put thread to sleep on cv's wait channel till signalled
-
-
+        wchan_sleep(cv->cv_wchan, &cv->cv_spinlock);
+        
+        // Release spinlock
+        spinlock_release(&cv->cv_spinlock);
+        
         // Reacquire lock
         lock_acquire(lock);
 
-	// Write this
-	(void)cv;    // suppress warning until code gets written
-	(void)lock;  // suppress warning until code gets written
 }
 
 void
 cv_signal(struct cv *cv, struct lock *lock)
 {
+        // Make sure the lock is real and yours.
+        KASSERT(lock != NULL);
+        KASSERT(lock_do_i_hold(lock));        
 
-        // Caller must hold the lock (check curthread == lock->lk_thread)
-        // This lock must be the same as the lock that was used in 'wait' call.
+        // Make sure the cv exists
+        KASSERT(cv != NULL);
+        
+        // Lock down the process
+        spinlock_acquire(&cv->cv_spinlock);
 
         // Wake one of the threads on the waitchannel
 	wchan_wakeone(cv->cv_wchan, &cv->cv_spinlock);
          
+        // Release spinlock
+        spinlock_release(&cv->cv_spinlock);
 
-	// Write this
-	(void)cv;    // suppress warning until code gets written
-	(void)lock;  // suppress warning until code gets written
 }
 
 void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {
+        // Make sure the lock is real and yours.
+        KASSERT(lock != NULL);
+        KASSERT(lock_do_i_hold(lock));        
 
-        // Caller must hold the lock (check curthread == lock->lk_thread)
-        // This lock must be the same as the lock that was used in 'wait' call.
+        // Make sure the cv exists
+        KASSERT(cv != NULL);
 
+        // Lock down the process
+        spinlock_acquire(&cv->cv_spinlock);
+        
         // Wake all of the threads on the wait channel
+        wchan_wakeall(cv->cv_wchan, &cv->cv_spinlock);
+        // Release spinlock
+        spinlock_release(&cv->cv_spinlock);
 
-	// Write this
-	(void)cv;    // suppress warning until code gets written
-	(void)lock;  // suppress warning until code gets written
 }

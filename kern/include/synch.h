@@ -126,9 +126,6 @@ struct cv {
 	// The wait channel to wake/sleep
         struct wchan *cv_wchan;
 
-        // The lock to check against
-        struct lock *cv_lock;
-	
         // The spinlock
 	struct spinlock cv_spinlock;
 
