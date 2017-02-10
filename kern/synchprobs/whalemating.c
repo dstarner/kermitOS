@@ -40,6 +40,11 @@
 #include <test.h>
 #include <synch.h>
 
+// So, here I'm going to put all my thoughts....
+// You need conditional variables to wait and signal when correct
+// numbers are hit. You also need to keep track of the 
+// number of each type
+
 /*
  * Called by the driver during initialization.
  */
