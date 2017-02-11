@@ -69,6 +69,18 @@
 #include <test.h>
 #include <synch.h>
 
+/*
+*
+*    SOME HELPER FUNCTIONS DEFINED
+*
+*/
+
+
+void make_right(struct lock *, uint32_t dir, uint32_t index);
+void make_straight(struct lock *, struct lock *, uint32_t dir, uint32_t index);
+void make_left(struct lock *, struct lock *, struct lock *, uint32_t dir, uint32_t index);
+
+
 // The intersection as a whole
 struct semaphore * intersection;
 
@@ -116,33 +128,163 @@ void stoplight_cleanup() {
 
 }
 
+
+void make_right(struct lock * start, uint32_t dir, uint32_t index) {
+
+        lock_acquire(start);
+
+        inQuadrant(dir, index);
+
+        leaveIntersection(index);
+
+        lock_release(start);
+
+}
+
+
+void make_straight(struct lock * start, struct lock * end, uint32_t dir, uint32_t index) {
+
+       // Start moving
+       lock_acquire(start);
+
+       // Inform test of our location
+       inQuadrant(dir, index);
+
+       // Move into final quadrant
+       lock_acquire(end);
+
+       // Inform of updated quadrant
+       inQuadrant((dir + 3) % 4, index);
+
+       // Leave start quadrant
+       lock_release(start);
+
+       leaveIntersection(index);
+
+       // Free up quadrant
+       lock_release(end);
+
+}
+
+
+void make_left(struct lock * start, struct lock * mid, struct lock * end, uint32_t dir, uint32_t index) {
+
+        // Move into intersection
+        lock_acquire(start);
+
+        // Tell test
+        inQuadrant(dir, index);
+
+        // Move into next quad
+        lock_acquire(mid);
+        inQuadrant((dir + 3) % 4, index);
+
+        // Leave start quad
+        lock_release(start);
+
+        // Move into last quad
+        lock_acquire(end);
+        inQuadrant((dir + 2) % 4, index);
+
+        // Leave mid quad
+        lock_release(mid);
+
+        leaveIntersection(index);
+     
+        // Leave the last quad
+        lock_release(end);
+
+}
+
+
 void
 turnright(uint32_t direction, uint32_t index)
 {
-	(void)direction;
-	(void)index;
-	/*
-	 * Implement this function.
-	 */
-	return;
+
+        // Tell the semaphore a car (thread) is coming
+        P(intersection);
+
+        struct lock * lock_to_use = NULL;
+
+        // Welp, crappy if/else ifs....
+        if (direction == 0) {
+                lock_to_use = quad0_lock;
+        } else if (direction == 1) {
+                lock_to_use = quad1_lock;
+        } else if (direction == 2) {
+                lock_to_use = quad2_lock;
+        } else if (direction == 3) {
+                lock_to_use = quad3_lock;
+        }
+
+        // Perform the action
+        make_right(lock_to_use, direction, index); 
+
+        // Car is safely leaving intersection
+        V(intersection);
+
 }
 void
 gostraight(uint32_t direction, uint32_t index)
 {
-	(void)direction;
-	(void)index;
-	/*
-	 * Implement this function.
-	 */
-	return;
+        // Tell the semaphore a car (thread) is coming
+        P(intersection);
+        
+        struct lock * start = NULL;
+        struct lock * end = NULL;
+
+        // Welp, crappy if/else ifs....
+        if (direction == 0) {
+                start = quad0_lock;
+                end = quad3_lock;
+        } else if (direction == 1) {
+                start = quad1_lock;
+                end = quad0_lock;
+        } else if (direction == 2) {
+                start = quad2_lock;
+                end = quad1_lock;
+        } else if (direction == 3) {
+                start = quad3_lock;
+                end = quad2_lock;
+        }
+        
+        // Perform the action
+        make_straight(start, end, direction, index); 
+
+        // Car is safely leaving intersection
+        V(intersection);
 }
 void
 turnleft(uint32_t direction, uint32_t index)
 {
-	(void)direction;
-	(void)index;
-	/*
-	 * Implement this function.
-	 */
-	return;
+        // Tell the semaphore a car (thread) is coming
+        P(intersection);
+       
+        struct lock * start = NULL;
+        struct lock * mid = NULL;
+        struct lock * end = NULL;
+
+        // Welp, crappy if/else ifs....
+        if (direction == 0) {
+                start = quad0_lock;
+                mid = quad3_lock;
+                end = quad2_lock;
+        } else if (direction == 1) {
+                start = quad1_lock;
+                mid = quad0_lock;
+                end = quad3_lock;
+        } else if (direction == 2) {
+                start = quad2_lock;
+                mid = quad1_lock;
+                end = quad0_lock;
+        } else if (direction == 3) {
+                start = quad3_lock;
+                mid = quad2_lock;
+                end = quad1_lock;
+        }
+
+        // Perform the action
+        make_left(start, mid, end, direction, index); 
+        
+        V(intersection);
 }
