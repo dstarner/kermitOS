@@ -173,6 +173,7 @@ lock_create(const char *name)
         // holding the lock to null. 
         lock->lk_thread = NULL;
 
+	HANGMAN_LOCKABLEINIT(&lock->lk_hangman, lock->lk_name);
 
 	return lock;
 }
@@ -186,7 +187,6 @@ lock_destroy(struct lock *lock)
         // then we fucked up
         KASSERT(lock->lk_thread == NULL);
 
-	// add stuff here as needed
 	// If there is a thread currently using the lock, PANIC!
 	/* wchan_cleanup will assert if anyone's waiting on it */
 	spinlock_cleanup(&lock->lk_spinlock);
@@ -204,6 +204,9 @@ lock_acquire(struct lock *lock)
 
         // Aquire spinlock
         spinlock_acquire(&lock->lk_spinlock);
+	
+        /* Call this (atomically) before waiting for a lock */
+	HANGMAN_WAIT(&curthread->t_hangman, &lock->lk_hangman);
 
 	// If not in control of the spinlock, sleep
 	while (lock->lk_thread != NULL) {
@@ -213,10 +216,15 @@ lock_acquire(struct lock *lock)
 	}
 
 	// Set the current thread.
+	
 	lock->lk_thread = curthread;
+        
+        /* Call this (atomically) once the lock is acquired */
+	HANGMAN_ACQUIRE(&curthread->t_hangman, &lock->lk_hangman);
 
 	// Release the spinlock
 	spinlock_release(&lock->lk_spinlock);
+
 
 }
 
@@ -235,12 +243,16 @@ lock_release(struct lock *lock)
 
         // Release current thread
 	lock->lk_thread = NULL;
+	
+        /* Call this (atomically) when the lock is released */
+	HANGMAN_RELEASE(&curthread->t_hangman, &lock->lk_hangman);
         
 	// Wake up a spinlock
 	wchan_wakeone(lock->lk_wchan, &lock->lk_spinlock);
 
 	// Release the spinlock
 	spinlock_release(&lock->lk_spinlock);
+
 
 }
 

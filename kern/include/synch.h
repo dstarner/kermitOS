@@ -77,12 +77,13 @@ void V(struct semaphore *sema);
  */
 struct lock {
 	char *lk_name;
-    // The thread that currently has the lock
+        // The thread that currently has the lock
 	struct thread *lk_thread;
 	// The wait channel
 	struct wchan *lk_wchan;
 	// The spinlock
 	struct spinlock lk_spinlock;
+        HANGMAN_LOCKABLE(lk_hangman);   /* Deadlock detector hook. */
 };
 
 struct lock *lock_create(const char *name);
