@@ -85,12 +85,18 @@ struct lock * quad3_lock;
 void
 stoplight_init() {
 
-        intersection = sem_create("Intersection", 4);
+        intersection = sem_create("Intersection", 3);
 
         quad0_lock = lock_create("Quadrant 0");
         quad1_lock = lock_create("Quadrant 1");
         quad2_lock = lock_create("Quadrant 2");
         quad3_lock = lock_create("Quadrant 3");
+
+        // Make sure there's an intersection
+        KASSERT(intersection != NULL);
+        
+        // Make sure we have some form of order
+        KASSERT(quad0_lock != NULL && quad1_lock != NULL && quad2_lock != NULL && quad3_lock != NULL);
 }
 
 /*
