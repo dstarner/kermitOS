@@ -69,13 +69,28 @@
 #include <test.h>
 #include <synch.h>
 
+// The intersection as a whole
+struct semaphore * intersection;
+
+// Locks ensuring one car per quadrant
+struct lock * quad0_lock;
+struct lock * quad1_lock;
+struct lock * quad2_lock;
+struct lock * quad3_lock;
+
 /*
  * Called by the driver during initialization.
  */
 
 void
 stoplight_init() {
-	return;
+
+        intersection = sem_create("Intersection", 4);
+
+        quad0_lock = lock_create("Quadrant 0");
+        quad1_lock = lock_create("Quadrant 1");
+        quad2_lock = lock_create("Quadrant 2");
+        quad3_lock = lock_create("Quadrant 3");
 }
 
 /*
@@ -83,7 +98,16 @@ stoplight_init() {
  */
 
 void stoplight_cleanup() {
-	return;
+
+        // Cleanup
+        sem_destroy(intersection);
+
+        // Destroy locks
+        lock_destroy(quad0_lock);
+        lock_destroy(quad1_lock);
+        lock_destroy(quad2_lock);
+        lock_destroy(quad3_lock);
+
 }
 
 void
