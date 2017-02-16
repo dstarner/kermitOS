@@ -37,6 +37,7 @@
 
 #include <spinlock.h>
 
+
 /*
  * Dijkstra-style semaphore.
  *
@@ -50,8 +51,9 @@ struct semaphore {
 	volatile unsigned sem_count;
 };
 
-struct semaphore *sem_create(const char *name, unsigned initial_count);
-void sem_destroy(struct semaphore *);
+struct semaphore *sem_create(const char *name, unsigned initial_counti);
+
+void sem_destroy(struct semaphore *sema);
 
 /*
  * Operations (both atomic):
@@ -59,8 +61,9 @@ void sem_destroy(struct semaphore *);
  *                   the count is 1 again before decrementing.
  *     V (verhogen): increment count.
  */
-void P(struct semaphore *);
-void V(struct semaphore *);
+void P(struct semaphore *sema);
+
+void V(struct semaphore *sema);
 
 
 /*
@@ -73,17 +76,20 @@ void V(struct semaphore *);
  * (should be) made internally.
  */
 struct lock {
-        char *lk_name;
-        HANGMAN_LOCKABLE(lk_hangman);   /* Deadlock detector hook. */
-        // add what you need here
-        // (don't forget to mark things volatile as needed)
-				struct wchan *lk_wchan;
-				struct spinlock lk_lock;
-				volatile struct thread *lk_thread;
+	char *lk_name;
+  // The thread that currently has the lock
+	volatile struct thread *lk_thread;
+	// The wait channel
+	struct wchan *lk_wchan;
+	// The spinlock
+	struct spinlock lk_lock;
+
+  HANGMAN_LOCKABLE(lk_hangman);   /* Deadlock detector hook. */
 };
 
 struct lock *lock_create(const char *name);
-void lock_destroy(struct lock *);
+
+void lock_destroy(struct lock *l);
 
 /*
  * Operations:
@@ -96,9 +102,11 @@ void lock_destroy(struct lock *);
  *
  * These operations must be atomic. You get to write them.
  */
-void lock_acquire(struct lock *);
-void lock_release(struct lock *);
-bool lock_do_i_hold(struct lock *);
+void lock_acquire(struct lock *l);
+
+void lock_release(struct lock *l);
+
+bool lock_do_i_hold(struct lock *l);
 
 
 /*
@@ -124,7 +132,7 @@ struct cv {
 };
 
 struct cv *cv_create(const char *name);
-void cv_destroy(struct cv *);
+void cv_destroy(struct cv *lock);
 
 /*
  * Operations:
@@ -164,8 +172,9 @@ struct rwlock {
 				volatile int has_writer;
 };
 
-struct rwlock * rwlock_create(const char *);
-void rwlock_destroy(struct rwlock *);
+struct rwlock * rwlock_create(const char *name);
+
+void rwlock_destroy(struct rwlock *lock);
 
 /*
  * Operations:
@@ -179,9 +188,13 @@ void rwlock_destroy(struct rwlock *);
  * These operations must be atomic. You get to write them.
  */
 
-void rwlock_acquire_read(struct rwlock *);
-void rwlock_release_read(struct rwlock *);
-void rwlock_acquire_write(struct rwlock *);
-void rwlock_release_write(struct rwlock *);
+void rwlock_acquire_read(struct rwlock *lock);
+
+void rwlock_release_read(struct rwlock *lock);
+
+void rwlock_acquire_write(struct rwlock *lock);
+
+void rwlock_release_write(struct rwlock *lock);
+
 
 #endif /* _SYNCH_H_ */

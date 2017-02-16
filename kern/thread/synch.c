@@ -40,6 +40,8 @@
 #include <current.h>
 #include <synch.h>
 
+// curthread gives the current thread
+
 ////////////////////////////////////////////////////////////
 //
 // Semaphore.
@@ -143,18 +145,18 @@ lock_create(const char *name)
 {
 	struct lock *lock;
 
+	// Create the lock, return if null
 	lock = kmalloc(sizeof(*lock));
 	if (lock == NULL) {
 		return NULL;
 	}
 
+	// Give name to lock, free if no name
 	lock->lk_name = kstrdup(name);
 	if (lock->lk_name == NULL) {
 		kfree(lock);
 		return NULL;
 	}
-
-	HANGMAN_LOCKABLEINIT(&lock->lk_hangman, lock->lk_name);
 
 	// add stuff here as needed
 	// Create wchan
@@ -172,6 +174,8 @@ lock_create(const char *name)
 	// Instantiate thread to null, to allow threads to acquire the lock.
 	lock->lk_thread = NULL;
 
+	HANGMAN_LOCKABLEINIT(&lock->lk_hangman, lock->lk_name);
+
 	return lock;
 }
 
@@ -180,6 +184,7 @@ lock_destroy(struct lock *lock)
 {
 	KASSERT(lock != NULL);
 
+<<<<<<< HEAD
 	// Need to make sure the lock does not have any active threads before it
 	// is destroyed.
 	KASSERT(lock->lk_thread == NULL);
@@ -187,6 +192,7 @@ lock_destroy(struct lock *lock)
 	// add stuff here as needed
 	// Clean up memory when the lock is destroyed.
 	spinlock_cleanup(&lock->lk_lock);
+
 	wchan_destroy(lock->lk_wchan);
 
 	kfree(lock->lk_name);
@@ -196,14 +202,15 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock)
 {
-	/* Call this (atomically) before waiting for a lock */
-	HANGMAN_WAIT(&curthread->t_hangman, &lock->lk_hangman);
-
+<<<<<<< HEAD
 	// Write this
 	KASSERT(lock != NULL); // Make sure lock exists.
 	KASSERT(curthread->t_in_interrupt == false); // May not block in an interrupt handler.
 
 	spinlock_acquire(&lock->lk_lock);
+
+	/* Call this (atomically) before waiting for a lock */
+	HANGMAN_WAIT(&curthread->t_hangman, &lock->lk_hangman);
 
 	// Keep repeating while the lock has an active thread.
 	while	(lock->lk_thread != NULL) {
@@ -245,11 +252,15 @@ lock_release(struct lock *lock)
 
 	spinlock_release(&lock->lk_lock);
 
+  /* Call this (atomically) when the lock is released */
+	HANGMAN_RELEASE(&curthread->t_hangman, &lock->lk_hangman);
 }
 
 bool
 lock_do_i_hold(struct lock *lock)
 {
+	KASSERT(lock != NULL);
+
 	// To check if the lock is held by a thread, check if the current global thread
 	// is the same thread as the one in the lock.
 	return curthread == lock->lk_thread;
@@ -296,7 +307,9 @@ cv_destroy(struct cv *cv)
 {
 	KASSERT(cv != NULL);
 
-	// add stuff here as needed
+        // Check to make sure its in a good state
+	spinlock_cleanup(&cv->cv_spinlock);
+	wchan_destroy(cv->cv_wchan);
 
 	kfree(cv->cv_name);
 	kfree(cv);
