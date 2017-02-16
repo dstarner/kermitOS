@@ -184,7 +184,6 @@ lock_destroy(struct lock *lock)
 {
 	KASSERT(lock != NULL);
 
-<<<<<<< HEAD
 	// Need to make sure the lock does not have any active threads before it
 	// is destroyed.
 	KASSERT(lock->lk_thread == NULL);
@@ -202,7 +201,6 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock)
 {
-<<<<<<< HEAD
 	// Write this
 	KASSERT(lock != NULL); // Make sure lock exists.
 	KASSERT(curthread->t_in_interrupt == false); // May not block in an interrupt handler.
@@ -307,8 +305,8 @@ cv_destroy(struct cv *cv)
 {
 	KASSERT(cv != NULL);
 
-        // Check to make sure its in a good state
-	spinlock_cleanup(&cv->cv_spinlock);
+  // Check to make sure its in a good state
+	spinlock_cleanup(&cv->cv_lock);
 	wchan_destroy(cv->cv_wchan);
 
 	kfree(cv->cv_name);
