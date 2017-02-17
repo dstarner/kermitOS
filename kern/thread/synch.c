@@ -402,6 +402,7 @@ rwlock_create(const char *name)
 
 	rwlock->readers_count = 0;
 	rwlock->has_writer = 0;
+	rwlock->writer_queued = 0;
 
 	return rwlock;
 }
@@ -429,7 +430,7 @@ rwlock_acquire_read(struct rwlock *rwlock)
 	lock_acquire(rwlock->rwlock_lock);
 
 	// Make sure there are no writers before reading the file.
-	while (rwlock->has_writer) {
+	while (rwlock->writer_queued || rwlock->has_writer) {
 		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
 	}
 
@@ -463,11 +464,13 @@ rwlock_acquire_write(struct rwlock *rwlock)
 
 	// Make sure there are no writers before reading the file.
 	while (rwlock->has_writer || rwlock->readers_count > 0) {
+		rwlock->writer_queued = 1;
 		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
 	}
 
-	// Increase the amount of readers.
+	// Increase the amount of writers.
 	rwlock->has_writer = 1;
+	rwlock->writer_queued = 0;
 
 	lock_release(rwlock->rwlock_lock);
 }
@@ -483,8 +486,8 @@ rwlock_release_write(struct rwlock *rwlock)
 
 	// Attempt to wake all threads, in this situation there is nothing
 	// trying to read or write.
-	cv_broadcast(rwlock->rwlock_cv, rwlock->rwlock_lock);
 	rwlock->has_writer = 0;
+	cv_broadcast(rwlock->rwlock_cv, rwlock->rwlock_lock);
 
 	lock_release(rwlock->rwlock_lock);
 }

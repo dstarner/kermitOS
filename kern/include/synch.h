@@ -170,6 +170,7 @@ struct rwlock {
 				struct cv *rwlock_cv;
 				volatile int readers_count;
 				volatile int has_writer;
+				volatile int writer_queued;
 };
 
 struct rwlock * rwlock_create(const char *name);
@@ -186,6 +187,8 @@ void rwlock_destroy(struct rwlock *lock);
  *    rwlock_release_write - Free the write lock.
  *
  * These operations must be atomic. You get to write them.
+ *
+ * This is a reader preferred implementation of rwlock.
  */
 
 void rwlock_acquire_read(struct rwlock *lock);
