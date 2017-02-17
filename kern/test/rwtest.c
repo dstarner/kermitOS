@@ -53,13 +53,9 @@ int rwtest2(int nargs, char **args) {
 		panic("rwlock is null");
 	}
 
-	kprintf_n("Acquiring wlock 1...\n");
 	rwlock_acquire_write(test_rwl);
-	kprintf_n("Acquiring wlock 2...\n");
-	rwlock_acquire_write(test_rwl);
-	kprintf_n("Releasing wlock 1...\n");
 	rwlock_release_write(test_rwl);
-	kprintf_n("Releasing wlock 2...\n");
+	rwlock_acquire_write(test_rwl);
 	rwlock_release_write(test_rwl);
 
 	rwlock_destroy(test_rwl);
@@ -77,19 +73,29 @@ int rwtest3(int nargs, char **args) {
 	test_rwl = rwlock_create("testlock");
 
 	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
 	rwlock_acquire_write(test_rwl);
-	rwlock_release_read(test_rwl);
-	rwlock_acquire_read(test_rwl);
-	rwlock_release_read(test_rwl);
-	rwlock_acquire_read(test_rwl);
-	rwlock_release_read(test_rwl);
-	rwlock_acquire_read(test_rwl);
-	rwlock_release_read(test_rwl);
-	rwlock_acquire_read(test_rwl);
-	rwlock_release_read(test_rwl);
-	rwlock_acquire_read(test_rwl);
-	rwlock_release_read(test_rwl);
 	rwlock_release_write(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
+	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
 
 	rwlock_destroy(test_rwl);
 	test_rwl = NULL;
@@ -105,18 +111,34 @@ int rwtest4(int nargs, char **args) {
 
 	test_rwl = rwlock_create("testlock");
 
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
 	rwlock_acquire_read(test_rwl);
-	rwlock_acquire_write(test_rwl);
-	rwlock_release_write(test_rwl);
-	rwlock_acquire_write(test_rwl);
-	rwlock_release_write(test_rwl);
-	rwlock_acquire_write(test_rwl);
-	rwlock_release_write(test_rwl);
-	rwlock_acquire_write(test_rwl);
-	rwlock_release_write(test_rwl);
-	rwlock_acquire_write(test_rwl);
-	rwlock_release_write(test_rwl);
 	rwlock_release_read(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
+	rwlock_acquire_write(test_rwl);
+	rwlock_release_write(test_rwl);
 
 	rwlock_destroy(test_rwl);
 	test_rwl = NULL;
@@ -133,11 +155,9 @@ int rwtest5(int nargs, char **args) {
 	test_rwl = rwlock_create("testlock");
 
 	rwlock_acquire_read(test_rwl);
-	rwlock_acquire_read(test_rwl);
+	rwlock_release_read(test_rwl);
 	rwlock_acquire_write(test_rwl);
 	rwlock_release_write(test_rwl);
-	rwlock_release_read(test_rwl);
-	rwlock_release_read(test_rwl);
 	rwlock_acquire_write(test_rwl);
 	rwlock_release_write(test_rwl);
 	rwlock_acquire_write(test_rwl);

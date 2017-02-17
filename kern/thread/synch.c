@@ -430,7 +430,12 @@ rwlock_acquire_read(struct rwlock *rwlock)
 	lock_acquire(rwlock->rwlock_lock);
 
 	// Make sure there are no writers before reading the file.
-	while (rwlock->writer_queued || rwlock->has_writer) {
+	while (rwlock->writer_queued) {
+		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
+	}
+
+	// Make sure there are no writers before reading the file.
+	while (rwlock->has_writer) {
 		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
 	}
 
@@ -463,13 +468,18 @@ rwlock_acquire_write(struct rwlock *rwlock)
 	lock_acquire(rwlock->rwlock_lock);
 
 	// Make sure there are no writers before reading the file.
-	while (rwlock->has_writer || rwlock->readers_count > 0) {
-		rwlock->writer_queued = 1;
+	while (rwlock->has_writer) {
 		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
 	}
 
 	// Increase the amount of writers.
 	rwlock->has_writer = 1;
+	rwlock->writer_queued = 1;
+
+	while (rwlock->readers_count > 0) {
+		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
+	}
+
 	rwlock->writer_queued = 0;
 
 	lock_release(rwlock->rwlock_lock);
