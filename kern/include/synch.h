@@ -77,13 +77,14 @@ void V(struct semaphore *sema);
  */
 struct lock {
 	char *lk_name;
-        // The thread that currently has the lock
-	struct thread *lk_thread;
+  // The thread that currently has the lock
+	volatile struct thread *lk_thread;
 	// The wait channel
 	struct wchan *lk_wchan;
 	// The spinlock
-	struct spinlock lk_spinlock;
-        HANGMAN_LOCKABLE(lk_hangman);   /* Deadlock detector hook. */
+	struct spinlock lk_lock;
+
+  HANGMAN_LOCKABLE(lk_hangman);   /* Deadlock detector hook. */
 };
 
 struct lock *lock_create(const char *name);
@@ -124,12 +125,10 @@ bool lock_do_i_hold(struct lock *l);
 
 struct cv {
         char *cv_name;
-	// The wait channel to wake/sleep
-        struct wchan *cv_wchan;
-
-        // The spinlock
-	struct spinlock cv_spinlock;
-
+        // add what you need here
+        // (don't forget to mark things volatile as needed)
+				struct wchan *cv_wchan;
+				struct spinlock cv_lock;
 };
 
 struct cv *cv_create(const char *name);
@@ -151,6 +150,7 @@ void cv_destroy(struct cv *lock);
 void cv_wait(struct cv *cv, struct lock *lock);
 void cv_signal(struct cv *cv, struct lock *lock);
 void cv_broadcast(struct cv *cv, struct lock *lock);
+void cv_sanity_check(struct cv *cv, struct lock *lock);
 
 /*
  * Reader-writer locks.
@@ -163,19 +163,16 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
  */
 
 struct rwlock {
-        char *rw_name;
-        // The spinlock
-        struct lock *rw_lock;
-        
-        // Conditional 
-        struct cv *rw_cv;
-
-        // Readers waiting
-        volatile int b_read;
-
-        // Bool flag
-        volatile int w_wait;
-
+        char *rwlock_name;
+        // add what you need here
+        // (don't forget to mark things volatile as needed)
+				struct lock *rwlock_lock;
+				struct cv *rwlock_cv_readers;
+				struct cv *rwlock_cv_writers;
+				volatile int readers_count;
+				volatile int read_mode;
+				volatile int has_writer;
+				volatile int writers_queued;
 };
 
 struct rwlock * rwlock_create(const char *name);
@@ -186,12 +183,14 @@ void rwlock_destroy(struct rwlock *lock);
  * Operations:
  *    rwlock_acquire_read  - Get the lock for reading. Multiple threads can
  *                          hold the lock for reading at the same time.
- *    rwlock_release_read  - Free the lock. 
+ *    rwlock_release_read  - Free the lock.
  *    rwlock_acquire_write - Get the lock for writing. Only one thread can
  *                           hold the write lock at one time.
  *    rwlock_release_write - Free the write lock.
  *
  * These operations must be atomic. You get to write them.
+ *
+ * This is a reader preferred implementation of rwlock.
  */
 
 void rwlock_acquire_read(struct rwlock *lock);
