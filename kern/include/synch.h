@@ -167,10 +167,12 @@ struct rwlock {
         // add what you need here
         // (don't forget to mark things volatile as needed)
 				struct lock *rwlock_lock;
-				struct cv *rwlock_cv;
+				struct cv *rwlock_cv_readers;
+				struct cv *rwlock_cv_writers;
 				volatile int readers_count;
 				volatile int read_mode;
 				volatile int has_writer;
+				volatile int writers_queued;
 };
 
 struct rwlock * rwlock_create(const char *name);
