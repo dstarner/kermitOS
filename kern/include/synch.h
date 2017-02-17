@@ -169,8 +169,8 @@ struct rwlock {
 				struct lock *rwlock_lock;
 				struct cv *rwlock_cv;
 				volatile int readers_count;
+				volatile int read_mode;
 				volatile int has_writer;
-				volatile int writer_queued;
 };
 
 struct rwlock * rwlock_create(const char *name);

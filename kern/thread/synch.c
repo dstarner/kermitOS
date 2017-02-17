@@ -401,8 +401,8 @@ rwlock_create(const char *name)
 	}
 
 	rwlock->readers_count = 0;
+	rwlock->read_mode = 1;
 	rwlock->has_writer = 0;
-	rwlock->writer_queued = 0;
 
 	return rwlock;
 }
@@ -429,18 +429,19 @@ rwlock_acquire_read(struct rwlock *rwlock)
 
 	lock_acquire(rwlock->rwlock_lock);
 
+	// Switch rwlock mode if a set amount of time had passed in a mode.
 	// Make sure there are no writers before reading the file.
-	while (rwlock->writer_queued) {
-		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
-	}
-
-	// Make sure there are no writers before reading the file.
-	while (rwlock->has_writer) {
+	while (rwlock->has_writer || !rwlock->read_mode) {
 		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
 	}
 
 	// Increase the amount of readers.
 	rwlock->readers_count++;
+
+	// Only an arbitrary amount of readers can be active at a time.
+	if (rwlock->readers_count > 20) {
+		rwlock->read_mode = 0;
+	}
 
 	lock_release(rwlock->rwlock_lock);
 }
@@ -468,19 +469,13 @@ rwlock_acquire_write(struct rwlock *rwlock)
 	lock_acquire(rwlock->rwlock_lock);
 
 	// Make sure there are no writers before reading the file.
-	while (rwlock->has_writer) {
+	while (rwlock->has_writer || rwlock->readers_count > 0) {
 		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
 	}
 
 	// Increase the amount of writers.
 	rwlock->has_writer = 1;
-	rwlock->writer_queued = 1;
-
-	while (rwlock->readers_count > 0) {
-		cv_wait(rwlock->rwlock_cv, rwlock->rwlock_lock);
-	}
-
-	rwlock->writer_queued = 0;
+	rwlock->read_mode = 1;
 
 	lock_release(rwlock->rwlock_lock);
 }
