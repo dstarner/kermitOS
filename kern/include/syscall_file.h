@@ -13,8 +13,8 @@ struct f_handler {
     struct lock *fh_lock;
     // Vnode for where memory is.
     struct vnode *fh_node;
-    // mode_t for file permissions
-    mode_t fh_perms;
+    // Reference count for what is using file
+    unsigned int ref_count;
     // Current file position/offset
     off_t fh_position;
 };
