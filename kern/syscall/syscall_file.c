@@ -45,6 +45,18 @@ write(int fd, const void *buf, size_t buflen, int * err) {
     *err = EFAULT;
   }
 
+  struct uio * writer_uio;
+  struct iovec * writer_iovec;
+
+  // Length and buffer
+  writer_iovec->iov_ubase = buf;
+  writer_iovec->iov_len = buflen;
+
+  writer_uio->uio_iov = writer_iovec;
+  writer_uio->uio_rw = UIO_WRITE;  // Set up for reading
+  writer_uio->uio_segflg = UIO_USERSPACE;
+  writer_uio->uio_iovcnt = 1;
+
 };
 
 ssize_t
@@ -77,13 +89,16 @@ read(int fd, void *buf, size_t buflen, int * err) {
   // uio
 
   struct uio * reader_uio;
-  struct iovec reader_iovec;
+  struct iovec * reader_iovec;
 
   // Length and buffer
-  reader_iovec.iov_ubase = buf;
-  reader_iovec.iov_len = buflen;
+  reader_iovec->iov_ubase = buf;
+  reader_iovec->iov_len = buflen;
 
+  reader_uio->uio_iov = reader_iovec;
   reader_uio->uio_rw = UIO_READ;  // Set up for reading
+  reader_uio->uio_segflg = UIO_USERSPACE;
+  reader_uio->uio_iovcnt = 1;
 
 
 };
