@@ -38,6 +38,11 @@ ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
     return -1;
   }
 
+  if (buflen == 0) {
+    *err = EFAULT;
+    return -1;
+  }
+
   struct uio * writer_uio;
   struct iovec * writer_iovec;
 
@@ -79,6 +84,11 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
     return -1;
   }
 
+  if (buflen == 0) {
+    *err = EFAULT;
+    return -1;
+  }
+
   struct uio * reader_uio;
   struct iovec * reader_iovec;
 
@@ -95,6 +105,28 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   reader_uio->uio_resid = buflen;
   reader_uio->uio_offset = curproc->f_table[fd]->fh_position;
   reader_uio->uio_space = curproc->p_addrspace;
+  reader_uio->uio_resid = buflen;
 
+  // Start reading
+  rwlock_acquire_read(curproc->f_table[fd]->fh_lock);
 
+  // The amount remaining
+  int remaining = buflen;
+
+  // Read
+  int result = VOP_READ(curproc->f_table[fd]->fh_vnode, reader_uio);
+
+  // Amount transfered
+  remaining -= reader_uio->uio_resid;
+
+  // End Reading
+  rwlock_release_read(curproc->f_table[fd]->fh_lock);
+
+  if (result) {
+    *err = result;
+    return -1;
+  } else {
+    return remaining;
+  }
+  
 };
