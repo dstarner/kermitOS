@@ -5,7 +5,7 @@
 #include <current.h>
 #include <proc.h>
 #include <kern/errno.h>
-#include <kern/syscall_file.h>
+#include <syscall_file.h>
 #include <uio.h>
 
 

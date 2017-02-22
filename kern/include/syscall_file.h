@@ -8,6 +8,17 @@
 #ifndef SYSCALL_FILE_H
 #define SYSCALL_FILE_H
 
+struct f_handler {
+    // Lock for logistics
+    struct lock *fh_lock;
+    // Vnode for where memory is.
+    struct vnode *fh_node;
+    // mode_t for file permissions
+    mode_t fh_perms;
+    // Current file position/offset
+    off_t fh_position;
+};
+
 /*
 * DESCRIPTION
 * write writes up to buflen bytes to the file specified by fd, at the location
