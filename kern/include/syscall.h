@@ -108,7 +108,7 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 *   ENOSPC	There is no free space remaining on the filesystem containing the file.
 *   EIO	A hardware I/O error occurred writing the data.
 */
-ssize_t sys_write(int fd, const void *buf, size_t buflen, int * err);
+ssize_t sys_write(int, void *, size_t, int *);
 
 /*
 * DESCRIPTION
@@ -140,7 +140,7 @@ ssize_t sys_write(int fd, const void *buf, size_t buflen, int * err);
 *   EFAULT	Part or all of the address space pointed to by buf is invalid.
 *   EIO	    A hardware I/O error occurred reading the data.
 */
-ssize_t sys_read(int fd, void *buf, size_t buflen, int * err);
+ssize_t sys_read(int, void *, size_t, int *);
 
 
 #endif /* _SYSCALL_H_ */
