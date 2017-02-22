@@ -34,6 +34,24 @@
 #include <cdefs.h> /* for __DEAD */
 struct trapframe; /* from <machine/trapframe.h> */
 
+struct f_handler {
+
+    // Lock for logistics
+    struct rwlock *fh_lock;
+
+    // Vnode for where memory is.
+    struct vnode *fh_vnode;
+
+    // Reference count for what is using file
+    unsigned int ref_count;
+
+    // File permissions
+    mode_t fh_perms;
+
+    // Current file position/offset
+    off_t fh_position;
+};
+
 /*
  * The system call dispatcher.
  */
@@ -58,25 +76,6 @@ __DEAD void enter_new_process(int argc, userptr_t argv, userptr_t env,
 
 int sys_reboot(int code);
 int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
-
-
-struct f_handler {
-
-    // Lock for logistics
-    struct rwlock *fh_lock;
-
-    // Vnode for where memory is.
-    struct vnode *fh_vnode;
-
-    // Reference count for what is using file
-    unsigned int ref_count;
-
-    // File permissions
-    mode_t fh_perms;
-
-    // Current file position/offset
-    off_t fh_position;
-};
 
 /*
 * DESCRIPTION
@@ -109,8 +108,7 @@ struct f_handler {
 *   ENOSPC	There is no free space remaining on the filesystem containing the file.
 *   EIO	A hardware I/O error occurred writing the data.
 */
-ssize_t
-sys_write(int fd, const void *buf, size_t buflen, int * err);
+ssize_t sys_write(int fd, const void *buf, size_t buflen, int * err);
 
 /*
 * DESCRIPTION
@@ -142,8 +140,7 @@ sys_write(int fd, const void *buf, size_t buflen, int * err);
 *   EFAULT	Part or all of the address space pointed to by buf is invalid.
 *   EIO	    A hardware I/O error occurred reading the data.
 */
-ssize_t
-sys_read(int fd, void *buf, size_t buflen, int * err);
+ssize_t sys_read(int fd, void *buf, size_t buflen, int * err);
 
 
 #endif /* _SYSCALL_H_ */
