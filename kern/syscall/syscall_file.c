@@ -18,8 +18,7 @@
 
 // fd is file descriptor
 
-ssize_t
-sys_write(int fd, const void *buf, size_t buflen, int * err) {
+ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
 
   // Check if valid index
   if (fd < 0 || fd > __OPEN_MAX) {
@@ -53,9 +52,9 @@ sys_write(int fd, const void *buf, size_t buflen, int * err) {
   writer_uio->uio_rw = UIO_WRITE;  // Set up for writing
   writer_uio->uio_segflg = UIO_USERSPACE;
   writer_uio->uio_resid = buflen;
-  reader_uio->uio_resid = buflen;
-  reader_uio->uio_offset = curproc->f_table[fd]->fh_position;
-  reader_uio->uio_space = curproc->p_addrspace;
+  writer_uio->uio_resid = buflen;
+  writer_uio->uio_offset = curproc->f_table[fd]->fh_position;
+  writer_uio->uio_space = curproc->p_addrspace;
 
 };
 
