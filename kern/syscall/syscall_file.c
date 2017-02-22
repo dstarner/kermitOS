@@ -9,6 +9,8 @@
 #include <uio.h>
 
 
+// fd is file descriptor
+
 ssize_t
 write(int fd, const void *buf, size_t buflen, int * err) {
 
@@ -24,10 +26,7 @@ write(int fd, const void *buf, size_t buflen, int * err) {
     return -1;
   }
 
-}
-
-
-}
+};
 
 ssize_t
 read(int fd, void *buf, size_t buflen, int * err) {
@@ -43,5 +42,4 @@ read(int fd, void *buf, size_t buflen, int * err) {
     *err = EBADF;
     return -1;
   }
-
-}
+};

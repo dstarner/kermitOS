@@ -9,12 +9,19 @@
 #define SYSCALL_FILE_H
 
 struct f_handler {
+
     // Lock for logistics
-    struct lock *fh_lock;
+    struct rwlock *fh_lock;
+
     // Vnode for where memory is.
-    struct vnode *fh_node;
+    struct vnode *fh_vnode;
+
     // Reference count for what is using file
     unsigned int ref_count;
+
+    // File permissions
+    mode_t fh_perms;
+
     // Current file position/offset
     off_t fh_position;
 };
