@@ -40,6 +40,11 @@ write(int fd, const void *buf, size_t buflen, int * err) {
     return -1;
   }
 
+  // Check if valid buffer
+  if (buflen < 0) {
+    *err = EFAULT;
+  }
+
 };
 
 ssize_t
@@ -62,5 +67,23 @@ read(int fd, void *buf, size_t buflen, int * err) {
     *err = EBADF;
     return -1;
   }
+
+  // Check if valid buffer
+  if (buflen < 0) {
+    *err = EFAULT;
+  }
+
+  // curproc->f_table[fd]->vnode  == vnode *
+  // uio
+
+  struct uio * reader_uio;
+  struct iovec reader_iovec;
+
+  // Length and buffer
+  reader_iovec.iov_ubase = buf;
+  reader_iovec.iov_len = buflen;
+
+  reader_uio->uio_rw = UIO_READ;  // Set up for reading
+
 
 };
