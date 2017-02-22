@@ -60,6 +60,31 @@ ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
   writer_uio->uio_resid = buflen;
   writer_uio->uio_offset = curproc->f_table[fd]->fh_position;
   writer_uio->uio_space = curproc->p_addrspace;
+  writer_uio->uio_resid = buflen;
+
+  // Start writing
+  rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
+
+  int remaining = buflen;
+
+  writer_uio->uio_offset = curproc->f_table[fd]->fh_position;
+
+  int result = VOP_WRITE(curproc->f_table[fd]->fh_vnode, writer_uio);
+
+  int remaining -= writer_uio.uio_resid;
+
+  // Update offset
+  curproc->f_table[fd]->fh_position = writer_uio->uio_offset;
+
+  // Stop writing
+  rwlock_release_write(curproc->f_table[fd]->fh_lock);
+
+  if (result) {
+    *err = result;
+    return -1;
+  } else {
+    return remaining;
+  }
 
 };
 
@@ -113,11 +138,17 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   // The amount remaining
   int remaining = buflen;
 
+  // Current file offset
+  reader_uio.uio_offset = curproc->f_table[fd]->fh_position;
+
   // Read
   int result = VOP_READ(curproc->f_table[fd]->fh_vnode, reader_uio);
 
   // Amount transfered
   remaining -= reader_uio->uio_resid;
+
+  // Update offset
+  curproc->f_table[fd]->fh_position = reader_uio->uio_offset;
 
   // End Reading
   rwlock_release_read(curproc->f_table[fd]->fh_lock);
@@ -128,5 +159,5 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   } else {
     return remaining;
   }
-  
+
 };
