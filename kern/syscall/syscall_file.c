@@ -20,7 +20,7 @@
 // fd is file descriptor
 
 ssize_t
-write(int fd, const void *buf, size_t buflen, int * err) {
+sys_write(int fd, const void *buf, size_t buflen, int * err) {
 
   // Check if valid index
   if (fd < 0 || fd > __OPEN_MAX) {
@@ -65,7 +65,7 @@ write(int fd, const void *buf, size_t buflen, int * err) {
 };
 
 ssize_t
-read(int fd, void *buf, size_t buflen, int * err) {
+sys_read(int fd, void *buf, size_t buflen, int * err) {
 
   // Check if valid index
   if (fd < 0 || fd > __OPEN_MAX) {
@@ -89,7 +89,7 @@ read(int fd, void *buf, size_t buflen, int * err) {
   if (buflen < 0) {
     *err = EFAULT;
   }
-  
+
   struct uio * reader_uio;
   struct iovec * reader_iovec;
 

@@ -58,7 +58,7 @@ struct f_handler {
 *   EIO	A hardware I/O error occurred writing the data.
 */
 ssize_t
-write(int fd, const void *buf, size_t buflen, int * err);
+sys_write(int fd, const void *buf, size_t buflen, int * err);
 
 /*
 * DESCRIPTION
@@ -91,6 +91,6 @@ write(int fd, const void *buf, size_t buflen, int * err);
 *   EIO	    A hardware I/O error occurred reading the data.
 */
 ssize_t
-read(int fd, void *buf, size_t buflen, int * err);
+sys_read(int fd, void *buf, size_t buflen, int * err);
 
 #endif // SYSCALL_FILE_H
