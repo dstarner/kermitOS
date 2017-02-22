@@ -43,38 +43,36 @@ ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
     return -1;
   }
 
-  struct uio * writer_uio;
-  struct iovec * writer_iovec;
+  struct uio writer_uio;
+  struct iovec writer_iovec;
 
   // Length and buffer
-  writer_iovec->iov_ubase = buf;
-  writer_iovec->iov_len = buflen;
+  writer_iovec.iov_ubase = buf;
+  writer_iovec.iov_len = buflen;
 
   // Set up uio
-  writer_uio->uio_iov = writer_iovec;
-  writer_uio->uio_iovcnt = 1;
+  writer_uio.uio_iov = &writer_iovec;
+  writer_uio.uio_iovcnt = 1;
 
-  writer_uio->uio_rw = UIO_WRITE;  // Set up for writing
-  writer_uio->uio_segflg = UIO_USERSPACE;
-  writer_uio->uio_resid = buflen;
-  writer_uio->uio_resid = buflen;
-  writer_uio->uio_offset = curproc->f_table[fd]->fh_position;
-  writer_uio->uio_space = curproc->p_addrspace;
-  writer_uio->uio_resid = buflen;
+  writer_uio.uio_rw = UIO_WRITE;  // Set up for writing
+  writer_uio.uio_segflg = UIO_USERSPACE;
+  writer_uio.uio_resid = buflen;
+  writer_uio.uio_offset = curproc->f_table[fd]->fh_position;
+  writer_uio.uio_space = curproc->p_addrspace;
 
   // Start writing
   rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
 
   int remaining = buflen;
 
-  writer_uio->uio_offset = curproc->f_table[fd]->fh_position;
+  writer_uio.uio_offset = curproc->f_table[fd]->fh_position;
 
-  int result = VOP_WRITE(curproc->f_table[fd]->fh_vnode, writer_uio);
+  int result = VOP_WRITE(curproc->f_table[fd]->fh_vnode, &writer_uio);
 
-  int remaining -= writer_uio.uio_resid;
+  remaining -= writer_uio.uio_resid;
 
   // Update offset
-  curproc->f_table[fd]->fh_position = writer_uio->uio_offset;
+  curproc->f_table[fd]->fh_position = writer_uio.uio_offset;
 
   // Stop writing
   rwlock_release_write(curproc->f_table[fd]->fh_lock);
@@ -114,23 +112,22 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
     return -1;
   }
 
-  struct uio * reader_uio;
-  struct iovec * reader_iovec;
+  struct uio reader_uio;
+  struct iovec reader_iovec;
 
   // Length and buffer
-  reader_iovec->iov_ubase = buf;
-  reader_iovec->iov_len = buflen;
+  reader_iovec.iov_ubase = buf;
+  reader_iovec.iov_len = buflen;
 
   // Set up uio
-  reader_uio->uio_iov = reader_iovec;
-  reader_uio->uio_iovcnt = 1;
+  reader_uio.uio_iov = &reader_iovec;
+  reader_uio.uio_iovcnt = 1;
 
-  reader_uio->uio_rw = UIO_READ;  // Set up for reading
-  reader_uio->uio_segflg = UIO_USERSPACE;
-  reader_uio->uio_resid = buflen;
-  reader_uio->uio_offset = curproc->f_table[fd]->fh_position;
-  reader_uio->uio_space = curproc->p_addrspace;
-  reader_uio->uio_resid = buflen;
+  reader_uio.uio_rw = UIO_READ;  // Set up for reading
+  reader_uio.uio_segflg = UIO_USERSPACE;
+  reader_uio.uio_resid = buflen;
+  reader_uio.uio_offset = curproc->f_table[fd]->fh_position;
+  reader_uio.uio_space = curproc->p_addrspace;
 
   // Start reading
   rwlock_acquire_read(curproc->f_table[fd]->fh_lock);
@@ -142,13 +139,13 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   reader_uio.uio_offset = curproc->f_table[fd]->fh_position;
 
   // Read
-  int result = VOP_READ(curproc->f_table[fd]->fh_vnode, reader_uio);
+  int result = VOP_READ(curproc->f_table[fd]->fh_vnode, &reader_uio);
 
   // Amount transfered
-  remaining -= reader_uio->uio_resid;
+  remaining -= reader_uio.uio_resid;
 
   // Update offset
-  curproc->f_table[fd]->fh_position = reader_uio->uio_offset;
+  curproc->f_table[fd]->fh_position = reader_uio.uio_offset;
 
   // End Reading
   rwlock_release_read(curproc->f_table[fd]->fh_lock);
