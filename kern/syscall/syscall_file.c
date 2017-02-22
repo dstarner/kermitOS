@@ -34,7 +34,7 @@ sys_write(int fd, const void *buf, size_t buflen, int * err) {
   }
 
   // Check if not open for writing
-  if (!(curproc->file_table[fd]->fh_flags & O_ACCMODE)) {
+  if (!(curproc->f_table[fd]->fh_flags & O_ACCMODE)) {
     *err = EBADF;
     return -1;
   }
@@ -60,7 +60,7 @@ sys_write(int fd, const void *buf, size_t buflen, int * err) {
   writer_uio->uio_resid = buflen;
   reader_uio->uio_resid = buflen;
   reader_uio->uio_offset = curproc->f_table[fd]->fh_position;
-  reader_uio->uio_space = curproc->addrspace;
+  reader_uio->uio_space = curproc->p_addrspace;
 
 };
 
@@ -105,7 +105,7 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   reader_uio->uio_segflg = UIO_USERSPACE;
   reader_uio->uio_resid = buflen;
   reader_uio->uio_offset = curproc->f_table[fd]->fh_position;
-  reader_uio->uio_space = curproc->addrspace;
+  reader_uio->uio_space = curproc->p_addrspace;
 
 
 };
