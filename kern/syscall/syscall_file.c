@@ -52,10 +52,15 @@ write(int fd, const void *buf, size_t buflen, int * err) {
   writer_iovec->iov_ubase = buf;
   writer_iovec->iov_len = buflen;
 
+  // Set up uio
   writer_uio->uio_iov = writer_iovec;
-  writer_uio->uio_rw = UIO_WRITE;  // Set up for reading
+  writer_uio->uio_rw = UIO_WRITE;  // Set up for writing
   writer_uio->uio_segflg = UIO_USERSPACE;
   writer_uio->uio_iovcnt = 1;
+  writer_uio->uio_resid = buflen;
+  reader_uio->uio_resid = buflen;
+  reader_uio->uio_offset = curproc->f_table[fd]->fh_position;
+  reader_uio->uio_space = curproc->addrspace;
 
 };
 
@@ -84,10 +89,7 @@ read(int fd, void *buf, size_t buflen, int * err) {
   if (buflen < 0) {
     *err = EFAULT;
   }
-
-  // curproc->f_table[fd]->vnode  == vnode *
-  // uio
-
+  
   struct uio * reader_uio;
   struct iovec * reader_iovec;
 
@@ -95,10 +97,14 @@ read(int fd, void *buf, size_t buflen, int * err) {
   reader_iovec->iov_ubase = buf;
   reader_iovec->iov_len = buflen;
 
+  // Set up uio
   reader_uio->uio_iov = reader_iovec;
   reader_uio->uio_rw = UIO_READ;  // Set up for reading
   reader_uio->uio_segflg = UIO_USERSPACE;
   reader_uio->uio_iovcnt = 1;
+  reader_uio->uio_resid = buflen;
+  reader_uio->uio_offset = curproc->f_table[fd]->fh_position;
+  reader_uio->uio_space = curproc->addrspace;
 
 
 };
