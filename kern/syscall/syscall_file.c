@@ -34,14 +34,9 @@ sys_write(int fd, const void *buf, size_t buflen, int * err) {
   }
 
   // Check if not open for writing
-  if (!(curproc->f_table[fd]->fh_flags & O_ACCMODE)) {
+  if (!(curproc->f_table[fd]->fh_perms & O_ACCMODE)) {
     *err = EBADF;
     return -1;
-  }
-
-  // Check if valid buffer
-  if (buflen < 0) {
-    *err = EFAULT;
   }
 
   struct uio * writer_uio;
@@ -83,11 +78,6 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   if (curproc->f_table[fd]->fh_perms & O_WRONLY) {
     *err = EBADF;
     return -1;
-  }
-
-  // Check if valid buffer
-  if (buflen < 0) {
-    *err = EFAULT;
   }
 
   struct uio * reader_uio;
