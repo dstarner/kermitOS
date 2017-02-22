@@ -35,7 +35,7 @@
 #include <mips/trapframe.h>
 #include <thread.h>
 #include <current.h>
-#include <syscall.h>;
+#include <syscall.h>
 
 /*
  * System call dispatcher.
