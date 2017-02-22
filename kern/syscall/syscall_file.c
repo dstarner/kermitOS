@@ -8,7 +8,6 @@
 #include <copyinout.h>
 #include <kern/errno.h>
 #include <kern/fcntl.h>
-#include <syscall_file.h>
 #include <uio.h>
 #include <kern/iovec.h>
 #include <copyinout.h>
