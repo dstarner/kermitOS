@@ -30,13 +30,12 @@
 #include <types.h>
 #include <kern/errno.h>
 #include <kern/syscall.h>
+#include <syscall_file.h>
 #include <lib.h>
 #include <mips/trapframe.h>
 #include <thread.h>
 #include <current.h>
-#include <syscall.h>
-#include <kern/syscall_file.h>
-
+#include <syscall.h>;
 
 /*
  * System call dispatcher.

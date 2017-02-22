@@ -8,7 +8,7 @@
 #include <copyinout.h>
 #include <kern/errno.h>
 #include <kern/fcntl.h>
-#include <kern/syscall_file.h>
+#include <syscall_file.h>
 #include <uio.h>
 #include <kern/iovec.h>
 #include <copyinout.h>
@@ -101,7 +101,7 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   // Set up uio
   reader_uio->uio_iov = reader_iovec;
   reader_uio->uio_iovcnt = 1;
-  
+
   reader_uio->uio_rw = UIO_READ;  // Set up for reading
   reader_uio->uio_segflg = UIO_USERSPACE;
   reader_uio->uio_resid = buflen;
