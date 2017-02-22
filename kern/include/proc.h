@@ -71,7 +71,7 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* File table...Each process is allowed 128 files open */
-	struct *f_table[__OPEN_MAX];
+	struct *f_handler[__OPEN_MAX] f_table;
 
 	/* add more material here as needed */
 };
