@@ -35,7 +35,7 @@ write(int fd, const void *buf, size_t buflen, int * err) {
   }
 
   // Check if not open for writing
-  if (curproc->f_table[fd]->fh_perms & O_WRONLY) {
+  if (!(curproc->file_table[fd]->fh_flags & O_ACCMODE)) {
     *err = EBADF;
     return -1;
   }
@@ -56,4 +56,11 @@ read(int fd, void *buf, size_t buflen, int * err) {
     *err = EBADF;
     return -1;
   }
+
+  // Check if not open for reading
+  if (curproc->f_table[fd]->fh_perms & O_WRONLY) {
+    *err = EBADF;
+    return -1;
+  }
+
 };
