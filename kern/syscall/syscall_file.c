@@ -20,11 +20,13 @@ void init_std() {
   for (int fd=0; fd < 3; fd++) {
 
     int failure = 0;
+    
+    char con[] = "con:";
 
     // Create basic
     curproc->f_table[fd] = kmalloc(sizeof(struct f_handler));
     if (curproc->f_table[fd] == NULL) {
-      return ENOMEM;
+      return;
     }
     curproc->f_table[fd]->fh_position = 0;
     curproc->f_table[fd]->ref_count = 1;
@@ -44,16 +46,16 @@ void init_std() {
     // stdin
     if (fd == 0) {
       curproc->f_table[fd]->fh_perms = O_RDONLY;
-      failure = vfs_open("con:", O_RDONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
+      failure = vfs_open(con, O_RDONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
 
     // stdout
     } else if (fd == 1) {
-      curproc->f_table[console_fd]->fh_perms = O_WRONLY;
-      failure = vfs_open("con:", O_WRONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
+      curproc->f_table[fd]->fh_perms = O_WRONLY;
+      failure = vfs_open(con, O_WRONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
 
     } else {
       curproc->f_table[fd]->fh_perms = O_WRONLY;
-      failure = vfs_open("con:", O_WRONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
+      failure = vfs_open(con, O_WRONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
     }
 
     if (failure) {
