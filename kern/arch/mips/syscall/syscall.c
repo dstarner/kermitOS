@@ -79,6 +79,7 @@ syscall(struct trapframe *tf)
 {
 	int callno;
 	int32_t retval;
+	off_t retval_64;
 	int err;
 
 	KASSERT(curthread != NULL);
@@ -97,14 +98,15 @@ syscall(struct trapframe *tf)
 	 */
 
 	retval = 0;
-        err = 0;
+	retval_64 = 0;
+	err = 0;
 
 	switch (callno) {
-    case SYS_reboot:
+		case SYS_reboot:
 			err = sys_reboot(tf->tf_a0);
 			break;
 
-    case SYS___time:
+  	case SYS___time:
 			err = sys___time((userptr_t)tf->tf_a0, (userptr_t)tf->tf_a1);
 			break;
 
@@ -122,6 +124,14 @@ syscall(struct trapframe *tf)
 
 		case SYS_close:
 			retval = sys_close((int)tf->tf_a0, &err);
+			break;
+
+		case SYS_lseek:
+			off_t pos = (off_t)tf->tf_a2;  // First 32 bits
+			pos = pos << 32;  // Bit shift by 32 bits
+			pos = pos & (off_t)tf->tf_a3; // And the two 32 bit parts for a 64 bit
+			int whence = 0;
+			retval_64 = sys_lseek((int)tf->tf_a0, pos, (int)copyin(tf->tf_sp+16, &whence, 4));
 			break;
 
 		case SYS__exit:

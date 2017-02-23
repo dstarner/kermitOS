@@ -324,3 +324,81 @@ int sys_close(int fd, int *err) {
 
   return 0;
 }
+
+off_t lseek(int fd, off_t pos, int whence, int *err) {
+
+  // Bad fd
+  if (fd < 0 || fd > OPEN_MAX) {
+    err = EBADF;
+    return -1;
+  }
+
+  if (curproc->f_table[fd] == NULL) {
+    err = EBADF;
+    return -1;
+  }
+
+  // Bad whence
+  if (!(whence == SEEK_SET || whence == SEEK_END || whence == SEEK_CUR)) {
+    err = EINVAL;
+    return -1;
+  }
+
+  // Seeking on a console
+  if (!VOP_ISSEEKABLE(&(curproc->f_table[fd]->fh_vnode))) {
+    err = ESPIPE;
+    return -1;
+  }
+
+  rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
+
+  // Easy to remember current offset
+  off_t cur_pos = curproc->f_table[fd]->fh_position);
+
+  // Get end of file
+  struct stat * stats;
+  int failure = VOP_STAT(curproc->f_table[fd]->fh_vnode, stats);
+
+  if (failure) {
+    err = EINVAL;
+    return -1;
+  }
+
+  // The total size of the file
+  off_t file_size = stats->st_size;
+
+  // Check if valid new position
+  if (whence == SEEK_SET && pos < 0) {
+    err = EINVAL;
+    return -1;
+  }
+
+
+  if (whence == SEEK_CUR && cur_pos + pos < 0) {
+    err = EINVAL;
+    return -1;
+  }
+
+  if (whence == SEEK_END && file_size + pos < 0) {
+    err = EINVAL;
+    return -1;
+  }
+
+  // Update position
+  if (whence == SEEK_END) {
+    // Go to end of file
+    curproc->f_table[fd]->fh_position = (file_size + pos);
+  } else if (whence == SEEK_CUR) {
+    // Add to current process
+    curproc->f_table[fd]->fh_position = curproc->f_table[fd]->fh_position + pos;
+  } else if (whence == SEEK_SET) {
+    // Set to pos
+    curproc->f_table[fd]->fh_position = pos;
+  }
+
+  // Release
+  rwlock_release_write(curproc->f_table[fd]->fh_lock);
+
+  return curproc->f_table[fd]->fh_position;
+
+}

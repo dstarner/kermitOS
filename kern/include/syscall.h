@@ -152,6 +152,9 @@ int sys_open(const char*, int, mode_t, int *);
 int sys_close(int fd, int *);
 
 
+off_t lseek(int, off_t, int, int*);
+
+
 /*
 *
 *   PROCESS SYSCALLS
@@ -161,6 +164,8 @@ int sys_close(int fd, int *);
 pid_t sys_getpid(void);
 
 void sys_exit(int);
+
+int sys_fork(void);
 
 
 #endif /* _SYSCALL_H_ */
