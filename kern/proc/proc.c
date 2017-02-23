@@ -54,6 +54,8 @@
  */
 struct proc *kproc;
 
+struct proc *procs[PID_MAX];
+
 /*
  * Create a proc structure.
  */
@@ -82,8 +84,28 @@ proc_create(const char *name)
 	/* VFS fields */
 	proc->p_cwd = NULL;
 
+	// Null out file table
 	for(int fd = 0; fd < __OPEN_MAX; fd++) {
  		proc->f_table[fd] = NULL;
+	}
+
+	// Get a process ID
+	for (int i=0; i < PID_MAX; i++) {
+
+		// Assign to empty
+		if (procs[i] == NULL) {
+			proc->pid = i;
+
+			procs[i] = proc;
+
+			// TODO: Check that proc is done and not out of memory
+			if (proc[i] == NULL) {
+
+			}
+
+			break;
+		}
+
 	}
 
 	return proc;
