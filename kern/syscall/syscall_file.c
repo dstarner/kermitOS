@@ -21,7 +21,7 @@
 ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
 
   // Check if valid index
-  if (fd < 0 || fd > __OPEN_MAX) {
+  if (fd < 0 || fd > OPEN_MAX) {
     *err = EBADF;
     return -1;
   }
@@ -90,7 +90,7 @@ ssize_t
 sys_read(int fd, void *buf, size_t buflen, int * err) {
 
   // Check if valid index
-  if (fd < 0 || fd > __OPEN_MAX) {
+  if (fd < 0 || fd > OPEN_MAX) {
     *err = EBADF;
     return -1;
   }
@@ -174,10 +174,10 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
 //
 // }
 
-int close(int fd, int *err) {
+int sys_close(int fd, int *err) {
 
   // Check valid fd
-  if (fd < 0 || fd > __OPEN_MAX) {
+  if (fd < 0 || fd > OPEN_MAX) {
     *err = EBADF;
     return -1;
   }

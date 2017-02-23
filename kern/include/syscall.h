@@ -145,6 +145,17 @@ ssize_t sys_read(int, void *, size_t, int *);
 
 // int open(const char*, int, mode_t, int *);
 
-int close(int fd, int *);
+int sys_close(int fd, int *);
+
+
+/*
+*
+*   PROCESS SYSCALLS
+*
+*/
+
+pid_t sys_getpid(void);
+
+
 
 #endif /* _SYSCALL_H_ */

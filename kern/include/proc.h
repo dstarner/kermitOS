@@ -72,10 +72,14 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* File table...Each process is allowed 128 files open */
-	struct f_handler *f_table[__OPEN_MAX];
+	struct f_handler *f_table[OPEN_MAX];
 
-	/* add more material here as needed */
+	/*Process ID */
+	pid_t pid;
 };
+
+/* Array of all of the processes */
+extern struct proc *procs[PID_MAX];
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;
