@@ -43,6 +43,7 @@
 #include <vm.h>
 #include <vfs.h>
 #include <syscall.h>
+#include <syscall_file.h>
 #include <test.h>
 
 /*
@@ -97,6 +98,8 @@ runprogram(char *progname)
 		return result;
 	}
 
+	void init_std();
+
 	/* Warp to user mode. */
 	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
@@ -106,4 +109,3 @@ runprogram(char *progname)
 	panic("enter_new_process returned\n");
 	return EINVAL;
 }
-

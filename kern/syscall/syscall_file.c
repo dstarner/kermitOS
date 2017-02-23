@@ -15,6 +15,60 @@
 #include <kern/seek.h>
 #include <kern/stat.h>
 
+void init_std() {
+
+  for (int fd=0; fd < 3; fd++) {
+
+    int failure = 0;
+
+    // Create basic
+    curproc->f_table[fd] = kmalloc(sizeof(struct f_handler));
+    if (curproc->f_table[fd] == NULL) {
+      return ENOMEM;
+    }
+    curproc->f_table[fd]->fh_position = 0;
+    curproc->f_table[fd]->ref_count = 1;
+
+    curproc->f_table[fd]->fh_lock = rwlock_create("stdcon");
+    if (curproc->f_table[fd]->fh_lock == NULL) {
+      failure = ENOMEM;
+    }
+
+    if (failure) {
+      rwlock_destroy(curproc->f_table[fd]->fh_lock);
+      vfs_close(curproc->f_table[fd]->fh_vnode);
+      kfree(curproc->f_table[fd]);
+      return;
+    }
+
+    // stdin
+    if (fd == 0) {
+      curproc->f_table[fd]->fh_perms = O_RDONLY;
+      failure = vfs_open("con:", O_RDONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
+
+    // stdout
+    } else if (fd == 1) {
+      curproc->f_table[console_fd]->fh_perms = O_WRONLY;
+      failure = vfs_open("con:", O_WRONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
+
+    } else {
+      curproc->f_table[fd]->fh_perms = O_WRONLY;
+      failure = vfs_open("con:", O_WRONLY, 0664, &(curproc->f_table[fd]->fh_vnode));
+    }
+
+    if (failure) {
+      // Delete all made con:'s if bad.
+      for (int i=0; i <= fd; i++) {
+        rwlock_destroy(curproc->f_table[i]->fh_lock);
+        vfs_close(curproc->f_table[i]->fh_vnode);
+        kfree(curproc->f_table[i]);
+      }
+      return;
+    }
+
+  }
+
+}
 
 // fd is file descriptor
 

@@ -111,6 +111,9 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 */
 ssize_t sys_write(int, void *, size_t, int *);
 
+/* Initialize file table with stdin/out/err */
+void init_std(void);
+
 /*
 * DESCRIPTION
 * read reads up to buflen bytes from the file specified by fd, at the location
