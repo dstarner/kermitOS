@@ -143,4 +143,8 @@ ssize_t sys_write(int, void *, size_t, int *);
 ssize_t sys_read(int, void *, size_t, int *);
 
 
+int open(const char, int, mode_t, int *);
+
+int close(int fd, int *);
+
 #endif /* _SYSCALL_H_ */

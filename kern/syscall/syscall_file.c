@@ -155,6 +155,60 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
     return -1;
   } else {
     return remaining;
+  };
+};
+
+int open(const char *f_name, int flags, mode_t mode, int *err) {
+
+  // Invalid flags
+  if (flags > O_NOCTTY) {
+    *err = EINVAL;
+    return -1;
   }
 
-};
+  // Invalid name
+  if (f_name == NULL) {
+    *err = EFAULT;
+    return -1;
+  }
+
+}
+
+int close(int fd, int *err) {
+
+  // Check valid fd
+  if (fd < 0 || fd > __OPEN_MAX) {
+    *err = EBADF;
+    return -1;
+  }
+
+  if (curproc->f_table[fd] == NULL) {
+    *err = EBADF;
+    return -1;
+  }
+
+  // Acquire write so we know we are the only ones messing with it.
+  rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
+
+  // Reduce the number of threads using it.
+  curproc->f_table[fd]->ref_count--;
+
+  // If nothing else is using it.
+  if (curproc->f_table[fd]->ref_count == 0) {
+    // Clean up and close the vnode
+    vfs_close(curproc->f_table[fd]->fh_vnode);
+    // Release and destroy the lock
+    rwlock_release_write(curproc->f_table[fd]->fh_lock);
+    rwlock_destroy(curproc->f_table[fd]->fh_lock);
+
+    // Free and NULL
+    kfree(curproc->f_table[fd]);
+    curproc->f_table[fd] = NULL;
+
+  } else {
+    // Just release and move on
+    rwlock_release_write(curproc->f_table[fd]->fh_lock);
+  }
+
+  return 0;
+}
