@@ -158,21 +158,21 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   };
 };
 
-int open(const char *f_name, int flags, mode_t mode, int *err) {
-
-  // Invalid flags
-  if (flags > O_NOCTTY) {
-    *err = EINVAL;
-    return -1;
-  }
-
-  // Invalid name
-  if (f_name == NULL) {
-    *err = EFAULT;
-    return -1;
-  }
-
-}
+// int open(const char *f_name, int flags, mode_t mode, int *err) {
+//
+//   // Invalid flags
+//   if (flags > O_NOCTTY) {
+//     *err = EINVAL;
+//     return -1;
+//   }
+//
+//   // Invalid name
+//   if (f_name == NULL) {
+//     *err = EFAULT;
+//     return -1;
+//   }
+//
+// }
 
 int close(int fd, int *err) {
 
