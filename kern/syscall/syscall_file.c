@@ -158,21 +158,79 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   };
 };
 
-// int open(const char *f_name, int flags, mode_t mode, int *err) {
-//
-//   // Invalid flags
-//   if (flags > O_NOCTTY) {
-//     *err = EINVAL;
-//     return -1;
-//   }
-//
-//   // Invalid name
-//   if (f_name == NULL) {
-//     *err = EFAULT;
-//     return -1;
-//   }
-//
-// }
+int open(const char *f_name, int flags, mode_t mode, int *err) {
+
+   // Invalid flags
+   if (flags > O_NOCTTY) {
+     *err = EINVAL;
+     return -1;
+   }
+
+   // Invalid name
+   if (f_name == NULL) {
+     *err = EFAULT;
+     return -1;
+   }
+
+   // Copy name for file_handle
+   char * filename = kmalloc(sizeof(char) * NAME_MAX);
+
+   // Some more setup here i think?
+
+   // Skip 0, 1, 2 for std in/out/err
+   int pos_fd = 3;
+
+   // Look for an open fd within range
+   while (post_id < OPEN_MAX && curproc->f_table[pos_fd] != NULL) {
+     pos_fd++;
+   }
+
+   // Too many files open
+   if (pos_fd >= OPEN_MAX) {
+     *err = EMFILE;
+     return -1;
+   }
+
+   // Create f_handle
+   curproc->f_table[fd] = kmalloc(sizeof(struct f_handle));
+   if (curproc->f_table[fd] == NULL) {
+     *err = ENOMEM;
+     // Free name and clear for shits n giggles
+     kfree(filename);
+     curproc->f_table[fd] == NULL;
+     return -1;
+   }
+
+   curproc->f_table[fd]->fh_lock = rwlock_create("file_handler");
+   if (curproc->f_table[fd]->fh_lock == NULL) {
+     *err = ENOMEM;
+     kfree(filename);
+     kfree(curproc->f_table[fd]->fh_lock);
+     curproc->f_table[fd] == NULL;
+     return -1;
+   }
+
+   curproc->f_table[fd]->ref_count = 1;
+   curproc->f_table[fd]->fh_perms = flags;
+   curproc->f_table[fd]->fh_position = 0;
+
+   int vnode_fail = vfs_open(filename, flags, mode, curproc->f_table[fd]->vnode);
+
+   // If failure, clean up
+   if (vnode_fail) {
+     *err = response;
+     kfree(filename);
+     rwlock_destroy(curproc->f_table[fd]->fh_lock);
+     kfree(curproc->f_table[fd]);
+     curproc->f_table[fd] = NULL;
+     return -1;
+   }
+
+   kfree(filename);
+
+   return fd;
+
+ }
 
 int sys_close(int fd, int *err) {
 
