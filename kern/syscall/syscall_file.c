@@ -181,7 +181,7 @@ int open(const char *f_name, int flags, mode_t mode, int *err) {
    int pos_fd = 3;
 
    // Look for an open fd within range
-   while (post_id < OPEN_MAX && curproc->f_table[pos_fd] != NULL) {
+   while (pos_fd < OPEN_MAX && curproc->f_table[pos_fd] != NULL) {
      pos_fd++;
    }
 
@@ -192,43 +192,43 @@ int open(const char *f_name, int flags, mode_t mode, int *err) {
    }
 
    // Create f_handle
-   curproc->f_table[fd] = kmalloc(sizeof(struct f_handle));
-   if (curproc->f_table[fd] == NULL) {
+   curproc->f_table[pos_fd] = kmalloc(sizeof(struct f_handler));
+   if (curproc->f_table[pos_fd] == NULL) {
      *err = ENOMEM;
      // Free name and clear for shits n giggles
      kfree(filename);
-     curproc->f_table[fd] == NULL;
+     curproc->f_table[pos_fd] = NULL;
      return -1;
    }
 
-   curproc->f_table[fd]->fh_lock = rwlock_create("file_handler");
-   if (curproc->f_table[fd]->fh_lock == NULL) {
+   curproc->f_table[pos_fd]->fh_lock = rwlock_create("file_handler");
+   if (curproc->f_table[pos_fd]->fh_lock == NULL) {
      *err = ENOMEM;
      kfree(filename);
-     kfree(curproc->f_table[fd]->fh_lock);
-     curproc->f_table[fd] == NULL;
+     kfree(curproc->f_table[pos_fd]->fh_lock);
+     curproc->f_table[pos_fd] = NULL;
      return -1;
    }
 
-   curproc->f_table[fd]->ref_count = 1;
-   curproc->f_table[fd]->fh_perms = flags;
-   curproc->f_table[fd]->fh_position = 0;
+   curproc->f_table[pos_fd]->ref_count = 1;
+   curproc->f_table[pos_fd]->fh_perms = flags;
+   curproc->f_table[pos_fd]->fh_position = 0;
 
-   int vnode_fail = vfs_open(filename, flags, mode, curproc->f_table[fd]->vnode);
+   int vnode_fail = vfs_open(filename, flags, mode, &(curproc->f_table[pos_fd]->fh_vnode));
 
    // If failure, clean up
    if (vnode_fail) {
-     *err = response;
+     *err = vnode_fail;
      kfree(filename);
-     rwlock_destroy(curproc->f_table[fd]->fh_lock);
-     kfree(curproc->f_table[fd]);
-     curproc->f_table[fd] = NULL;
+     rwlock_destroy(curproc->f_table[pos_fd]->fh_lock);
+     kfree(curproc->f_table[pos_fd]);
+     curproc->f_table[pos_fd] = NULL;
      return -1;
    }
 
    kfree(filename);
 
-   return fd;
+   return pos_fd;
 
  }
 
