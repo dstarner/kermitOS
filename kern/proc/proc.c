@@ -99,7 +99,7 @@ proc_create(const char *name)
 			procs[i] = proc;
 
 			// TODO: Check that proc is done and not out of memory
-			if (proc[i] == NULL) {
+			if (procs[i] == NULL) {
 
 			}
 
