@@ -50,6 +50,7 @@ struct f_handler {
 
     // Current file position/offset
     off_t fh_position;
+
 };
 
 /*
@@ -143,7 +144,7 @@ ssize_t sys_write(int, void *, size_t, int *);
 ssize_t sys_read(int, void *, size_t, int *);
 
 
-int open(const char*, int, mode_t, int *);
+int sys_open(const char*, int, mode_t, int *);
 
 int sys_close(int fd, int *);
 

@@ -158,7 +158,7 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   };
 };
 
-int open(const char *f_name, int flags, mode_t mode, int *err) {
+int sys_open(const char *f_name, int flags, mode_t mode, int *err) {
 
    // Invalid flags
    if (flags > O_NOCTTY) {
