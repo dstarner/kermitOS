@@ -3,9 +3,10 @@
 #include <synch.h>
 #include <kern/errno.h>
 #include <kern/fcntl.h>
+#include <proc.h>
 #include <current.h>
 
 
-pid_t getpid(void) {
+pid_t sys_getpid() {
   return curproc->pid;
 }

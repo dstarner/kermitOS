@@ -388,7 +388,7 @@ file      syscall/loadelf.c
 file      syscall/runprogram.c
 file      syscall/time_syscalls.c
 file      syscall/syscall_file.c
-file      syscall/syscall_process.c
+file      syscall/syscall_proc.c
 
 #
 # Startup and initialization
