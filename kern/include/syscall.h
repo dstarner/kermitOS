@@ -157,6 +157,7 @@ int sys_close(int fd, int *);
 
 pid_t sys_getpid(void);
 
+void sys_exit(void);
 
 
 #endif /* _SYSCALL_H_ */
