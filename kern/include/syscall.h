@@ -168,7 +168,7 @@ pid_t sys_getpid(void);
 
 void sys_exit(int);
 
-int sys_fork(void);
+int sys_fork(struct trapframe*, int);
 
 
 #endif /* _SYSCALL_H_ */
