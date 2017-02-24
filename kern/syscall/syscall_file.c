@@ -406,7 +406,7 @@ off_t sys_lseek(int fd, off_t pos, int whence, int *err) {
 
 }
 
-int sys_chdir(char * path, &err) {
+int sys_chdir(const char * path, int *err) {
 
   // Pathname for kernel space
   char * pathname = kmalloc(sizeof(char) * PATH_MAX);
@@ -433,7 +433,7 @@ int sys_chdir(char * path, &err) {
     return -1;
   }
 
-  kfree(pathname_copy);
+  kfree(pathname);
   return 0;
 
 }
