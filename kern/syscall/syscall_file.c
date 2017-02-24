@@ -327,62 +327,63 @@ int sys_close(int fd, int *err) {
   return 0;
 }
 
-off_t lseek(int fd, off_t pos, int whence, int *err) {
+off_t sys_lseek(int fd, off_t pos, int whence, int *err) {
 
   // Bad fd
   if (fd < 0 || fd > OPEN_MAX) {
-    err = EBADF;
+    *err = EBADF;
     return -1;
   }
 
   if (curproc->f_table[fd] == NULL) {
-    err = EBADF;
+    *err = EBADF;
     return -1;
   }
 
   // Bad whence
   if (!(whence == SEEK_SET || whence == SEEK_END || whence == SEEK_CUR)) {
-    err = EINVAL;
+    *err = EINVAL;
     return -1;
   }
 
-  // Seeking on a console
-  if (!VOP_ISSEEKABLE(&(curproc->f_table[fd]->fh_vnode))) {
-    err = ESPIPE;
-    return -1;
-  }
 
   rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
+  
+  // Seeking on a console
+  if (!VOP_ISSEEKABLE(curproc->f_table[fd]->fh_vnode)) {
+    *err = ESPIPE;
+    return -1;
+  }
 
   // Easy to remember current offset
-  off_t cur_pos = curproc->f_table[fd]->fh_position);
+  off_t cur_pos = curproc->f_table[fd]->fh_position;
 
   // Get end of file
-  struct stat * stats;
-  int failure = VOP_STAT(curproc->f_table[fd]->fh_vnode, stats);
+  struct stat stats;
+  int failure = VOP_STAT(curproc->f_table[fd]->fh_vnode, &stats);
 
   if (failure) {
-    err = EINVAL;
+    *err = EINVAL;
     return -1;
   }
 
   // The total size of the file
-  off_t file_size = stats->st_size;
+  off_t file_size = stats.st_size;
 
   // Check if valid new position
   if (whence == SEEK_SET && pos < 0) {
-    err = EINVAL;
+    *err = EINVAL;
     return -1;
   }
 
 
   if (whence == SEEK_CUR && cur_pos + pos < 0) {
-    err = EINVAL;
+    *err = EINVAL;
     return -1;
   }
 
   if (whence == SEEK_END && file_size + pos < 0) {
-    err = EINVAL;
+    *err = EINVAL;
     return -1;
   }
 

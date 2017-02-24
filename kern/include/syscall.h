@@ -152,7 +152,7 @@ int sys_open(const char*, int, mode_t, int *);
 int sys_close(int fd, int *);
 
 
-off_t lseek(int, off_t, int, int*);
+off_t sys_lseek(int, off_t, int, int*);
 
 
 /*

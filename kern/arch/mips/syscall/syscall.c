@@ -28,6 +28,7 @@
  */
 
 #include <types.h>
+#include <copyinout.h>
 #include <kern/errno.h>
 #include <kern/syscall.h>
 #include <lib.h>
@@ -79,7 +80,8 @@ syscall(struct trapframe *tf)
 {
 	int callno;
 	int32_t retval;
-	off_t retval_64;
+	int64_t retval_64;
+	int64_t pos;
 	int err;
 
 	KASSERT(curthread != NULL);
@@ -106,7 +108,7 @@ syscall(struct trapframe *tf)
 			err = sys_reboot(tf->tf_a0);
 			break;
 
-  	case SYS___time:
+  		case SYS___time:
 			err = sys___time((userptr_t)tf->tf_a0, (userptr_t)tf->tf_a1);
 			break;
 
@@ -127,11 +129,15 @@ syscall(struct trapframe *tf)
 			break;
 
 		case SYS_lseek:
-			off_t pos = (off_t)tf->tf_a2;  // First 32 bits
-			pos = pos << 32;  // Bit shift by 32 bits
-			pos = pos & (off_t)tf->tf_a3; // And the two 32 bit parts for a 64 bit
+			pos = tf->tf_a2;
+      			pos <<= 32;
+      			pos |= tf->tf_a3;
+
 			int whence = 0;
-			retval_64 = sys_lseek((int)tf->tf_a0, pos, (int)copyin(tf->tf_sp+16, &whence, 4));
+			copyin((const_userptr_t) (tf->tf_sp + 16), &whence, sizeof(whence));
+
+			retval_64 = sys_lseek((int)tf->tf_a0, (off_t)pos, whence, &err);
+			tf->tf_v1 = 0;
 			break;
 
 		case SYS__exit:
@@ -159,6 +165,11 @@ syscall(struct trapframe *tf)
 		tf->tf_a3 = 1;      /* signal an error */
 	}
 	else {
+		if (0 < retval_64) {
+			retval = (int32_t)(retval_64 >> 32);
+      			tf->tf_v1 = (int32_t)retval_64;
+		}
+
 		/* Success. */
 		tf->tf_v0 = retval;
 		tf->tf_a3 = 0;      /* signal no error */
