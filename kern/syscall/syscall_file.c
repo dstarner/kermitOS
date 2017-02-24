@@ -20,7 +20,7 @@ void init_std() {
   for (int fd=0; fd < 3; fd++) {
 
     int failure = 0;
-    
+
     char con[] = "con:";
 
     // Create basic
@@ -348,7 +348,7 @@ off_t sys_lseek(int fd, off_t pos, int whence, int *err) {
 
 
   rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
-  
+
   // Seeking on a console
   if (!VOP_ISSEEKABLE(curproc->f_table[fd]->fh_vnode)) {
     *err = ESPIPE;
@@ -403,5 +403,37 @@ off_t sys_lseek(int fd, off_t pos, int whence, int *err) {
   rwlock_release_write(curproc->f_table[fd]->fh_lock);
 
   return curproc->f_table[fd]->fh_position;
+
+}
+
+int sys_chdir(char * path, &err) {
+
+  // Pathname for kernel space
+  char * pathname = kmalloc(sizeof(char) * PATH_MAX);
+
+  // Size of pathname
+  size_t length;
+
+  // User to kernel space
+  int response = copyinstr((const_userptr_t) path, pathname, PATH_MAX, &length);
+
+  if (response) {
+    kfree(pathname);
+    *err = EFAULT;
+    return -1;
+  }
+
+  // Actually change directory
+  response = vfs_chdir(pathname);
+
+  if (response) {
+    kfree(pathname);
+    // Response will give error
+    *err = response;
+    return -1;
+  }
+
+  kfree(pathname_copy);
+  return 0;
 
 }

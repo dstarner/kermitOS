@@ -154,6 +154,7 @@ int sys_close(int fd, int *);
 
 off_t sys_lseek(int, off_t, int, int*);
 
+int sys_chdir(const char *, int*);
 
 /*
 *
