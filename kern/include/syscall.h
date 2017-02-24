@@ -149,7 +149,9 @@ ssize_t sys_read(int, void *, size_t, int *);
 
 int sys_open(const char*, int, mode_t, int *);
 
-int sys_close(int fd, int *);
+int sys_close(int, int *);
+
+int dup2(int, int, int *);
 
 
 off_t sys_lseek(int, off_t, int, int*);

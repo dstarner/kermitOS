@@ -437,3 +437,20 @@ int sys_chdir(char * path, &err) {
   return 0;
 
 }
+
+int dup2(int oldfd, int newfd, int * err) {
+
+  if ((oldfd < 0 || oldfd > OPEN_MAX) || (newfd < 0 || newfd > OPEN_MAX)) {
+    *err = EBADF;
+    return -1;
+  }
+
+  if (curproc->f_table[oldfd] == NULL) {
+    *err = EBADF;
+    return -1;
+  }
+
+  // Copy the actual file
+  return 0;
+
+}
