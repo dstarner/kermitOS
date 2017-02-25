@@ -56,27 +56,6 @@ struct proc *kproc;
 
 struct proc *procs[PID_MAX];
 
-struct proc * proc_new_child(const char *) {
-	struct proc *new_proc;
-	// Create the proc
-	new_proc = proc_create(name);
-	if (childproc == NULL) {
-		return NULL;
-	}
-
-	new_proc->parent_pid = curproc->pid;
-
-	// Copy file table
-	for(int fd=0;fd<OPEN_MAX;fd++) {
-		new_proc->f_table[fd] = curproc->f_table[fd];
-		if(new_proc->f_table[fd] != NULL) {
-			// Another process is using
-			new_proc->f_table[fd]->ref_count++;
-		}
-	}
-
-	return new_proc;
-}
 
 /*
  * Create a proc structure.
@@ -131,6 +110,29 @@ proc_create(const char *name)
 	}
 
 	return proc;
+}
+
+
+struct proc * proc_new_child(const char * new_name) {
+	struct proc *new_proc;
+	// Create the proc
+	new_proc = proc_create(new_name);
+	if (new_proc == NULL) {
+		return NULL;
+	}
+
+	new_proc->parent_pid = curproc->pid;
+
+	// Copy file table
+	for(int fd=0;fd<OPEN_MAX;fd++) {
+		new_proc->f_table[fd] = curproc->f_table[fd];
+		if(new_proc->f_table[fd] != NULL) {
+			// Another process is using
+			new_proc->f_table[fd]->ref_count++;
+		}
+	}
+
+	return new_proc;
 }
 
 /*
