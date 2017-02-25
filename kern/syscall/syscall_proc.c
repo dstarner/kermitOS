@@ -7,6 +7,8 @@
 #include <proc.h>
 #include <current.h>
 #include <thread.h>
+#include <mips/trapframe.h>
+#include <vnode.h>
 
 
 pid_t sys_getpid() {
@@ -28,7 +30,7 @@ void new_thread_start(void *tf, unsigned long addr){
   memcpy(&user_frame, new_tf, sizeof(struct trapframe));
   kfree(new_tf);
   new_tf = NULL;
-  curproc->p_addrspace = childaddr;
+  curproc->p_addrspace = new_addr;
   as_activate();
 
   // To user mode we gooooo!!!!!
@@ -46,7 +48,7 @@ int sys_fork(struct trapframe* tf, int *err) {
 
   // Create new trapframe
   new_tf = kmalloc(sizeof(struct trapframe));
-  if(childtf == NULL){
+  if(new_tf == NULL){
     *err = ENOMEM;
     return -1;
   }

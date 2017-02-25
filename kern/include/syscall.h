@@ -168,7 +168,8 @@ pid_t sys_getpid(void);
 
 void sys_exit(int);
 
-int sys_fork(struct trapframe*, int);
+int sys_fork(struct trapframe*, int*);
+void new_thread_start(void *, unsigned long);
 
 
 #endif /* _SYSCALL_H_ */
