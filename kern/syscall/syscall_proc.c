@@ -59,7 +59,7 @@ int sys_fork(struct trapframe* tf, int *err) {
     return -1;
   }
 
-  new_proc = proc_create_child("proc_child");
+  new_proc = proc_new_child("proc_child");
   if(new_proc == NULL){
     kfree(new_tf);
     *err = ENOMEM;
