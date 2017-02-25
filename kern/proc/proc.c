@@ -122,15 +122,17 @@ proc_create(const char *name)
 
 			// TODO: Check that proc is done and not out of memory
 			if (procs[i] == NULL) {
-
+				*err = ENOMEM;
+				return -1;
 			}
 
-			break;
+			return proc;
 		}
 
 	}
 
-	return proc;
+	*err = EMPROC;
+	return -1;
 }
 
 /*
