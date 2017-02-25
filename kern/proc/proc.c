@@ -48,6 +48,7 @@
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
+#include <errno.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -62,9 +63,10 @@ struct proc *procs[PID_MAX];
  */
 static
 struct proc *
-proc_create(const char *name)
-{
+proc_create(const char *name) {
 	struct proc *proc;
+
+	int err;
 
 	proc = kmalloc(sizeof(*proc));
 	if (proc == NULL) {
@@ -101,8 +103,8 @@ proc_create(const char *name)
 
 			// TODO: Check that proc is done and not out of memory
 			if (procs[i] == NULL) {
-				*err = ENOMEM;
-				return -1;
+				err = ENOMEM;
+				return NULL;
 			}
 
 			return proc;
@@ -110,8 +112,8 @@ proc_create(const char *name)
 
 	}
 
-	*err = EMPROC;
-	return -1;
+	err = EMPROC;
+	return NULL;
 }
 
 
