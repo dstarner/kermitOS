@@ -9,6 +9,8 @@
 #include <thread.h>
 #include <mips/trapframe.h>
 #include <vnode.h>
+#include <vfs.h>
+#include <copyinout.h>
 
 
 pid_t sys_getpid() {
@@ -101,7 +103,7 @@ int sys_execv(char *program, char **args, int *err) {
   // Copy the instructions
   failure = copyinstr((userptr_t)program, name_copy, NAME_MAX, &actual);
 
-  if failure {
+  if (failure) {
     *err = failure;
     return -1;
   }
@@ -118,7 +120,7 @@ int sys_execv(char *program, char **args, int *err) {
   }
 
   // Make sure valid pointers
-  if (int *)args == (int *)0x40000000 || (int *)args == (int *)0x80000000) {
+  if ((int *)args == (int *)0x40000000 || (int *)args == (int *)0x80000000) {
     *err = EFAULT;
     return -1;
   }
@@ -131,12 +133,12 @@ int sys_execv(char *program, char **args, int *err) {
     // Make sure its within number of args
     if (num_of_args > ARG_MAX) {
       *err = E2BIG;
-      return -1;
+    return -1;
     }
   }
 
   // Where the arguments will be copied for kernel space
-  char **kernel_args = (char **) kmalloc(sizeof(char *) * kernel_args);
+  char **kernel_args = (char **) kmalloc(sizeof(char *) * num_of_args);
 
   int copied_args = 0;
 
@@ -241,7 +243,7 @@ int sys_execv(char *program, char **args, int *err) {
 
   // Readjust stack pointer to the start
   stackptr -= padding;
-  stackptr -= (args_count + 1) * sizeof(char *);
+  stackptr -= (num_of_args + 1) * sizeof(char *);
 
   // Finish copying addresses to userspace
   for (int i = 0; i < num_of_args + 1; i++) {
