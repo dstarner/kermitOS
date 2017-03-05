@@ -37,7 +37,7 @@ struct trapframe; /* from <machine/trapframe.h> */
 struct f_handler {
 
     // Lock for logistics
-    struct rwlock *fh_lock;
+    struct lock *fh_lock;
 
     // Vnode for where memory is.
     struct vnode *fh_vnode;

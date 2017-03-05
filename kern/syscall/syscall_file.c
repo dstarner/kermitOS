@@ -31,13 +31,13 @@ void init_std() {
     curproc->f_table[fd]->fh_position = 0;
     curproc->f_table[fd]->ref_count = 1;
 
-    curproc->f_table[fd]->fh_lock = rwlock_create("stdcon");
+    curproc->f_table[fd]->fh_lock = lock_create("stdcon");
     if (curproc->f_table[fd]->fh_lock == NULL) {
       failure = ENOMEM;
     }
 
     if (failure) {
-      rwlock_destroy(curproc->f_table[fd]->fh_lock);
+      lock_destroy(curproc->f_table[fd]->fh_lock);
       vfs_close(curproc->f_table[fd]->fh_vnode);
       kfree(curproc->f_table[fd]);
       return;
@@ -61,7 +61,7 @@ void init_std() {
     if (failure) {
       // Delete all made con:'s if bad.
       for (int i=0; i <= fd; i++) {
-        rwlock_destroy(curproc->f_table[i]->fh_lock);
+        lock_destroy(curproc->f_table[i]->fh_lock);
         vfs_close(curproc->f_table[i]->fh_vnode);
         kfree(curproc->f_table[i]);
       }
@@ -117,7 +117,7 @@ ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
   writer_uio.uio_space = curproc->p_addrspace;
 
   // Start writing
-  rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
+  lock_acquire(curproc->f_table[fd]->fh_lock);
 
   int remaining = buflen;
 
@@ -131,7 +131,7 @@ ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
   curproc->f_table[fd]->fh_position = writer_uio.uio_offset;
 
   // Stop writing
-  rwlock_release_write(curproc->f_table[fd]->fh_lock);
+  lock_release(curproc->f_table[fd]->fh_lock);
 
   if (result) {
     *err = result;
@@ -186,7 +186,7 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   reader_uio.uio_space = curproc->p_addrspace;
 
   // Start reading
-  rwlock_acquire_read(curproc->f_table[fd]->fh_lock);
+  lock_acquire(curproc->f_table[fd]->fh_lock);
 
   // The amount remaining
   int remaining = buflen;
@@ -204,7 +204,7 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   curproc->f_table[fd]->fh_position = reader_uio.uio_offset;
 
   // End Reading
-  rwlock_release_read(curproc->f_table[fd]->fh_lock);
+  lock_release(curproc->f_table[fd]->fh_lock);
 
   if (result) {
     *err = result;
@@ -302,7 +302,7 @@ int sys_close(int fd, int *err) {
   }
 
   // Acquire write so we know we are the only ones messing with it.
-  rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
+  lock_acquire(curproc->f_table[fd]->fh_lock);
 
   // Reduce the number of threads using it.
   curproc->f_table[fd]->ref_count--;
@@ -312,7 +312,7 @@ int sys_close(int fd, int *err) {
     // Clean up and close the vnode
     vfs_close(curproc->f_table[fd]->fh_vnode);
     // Release and destroy the lock
-    rwlock_release_write(curproc->f_table[fd]->fh_lock);
+    lock_release(curproc->f_table[fd]->fh_lock);
     rwlock_destroy(curproc->f_table[fd]->fh_lock);
 
     // Free and NULL
@@ -321,7 +321,7 @@ int sys_close(int fd, int *err) {
 
   } else {
     // Just release and move on
-    rwlock_release_write(curproc->f_table[fd]->fh_lock);
+    lock_release(curproc->f_table[fd]->fh_lock);
   }
 
   return 0;
@@ -347,7 +347,7 @@ off_t sys_lseek(int fd, off_t pos, int whence, int *err) {
   }
 
 
-  rwlock_acquire_write(curproc->f_table[fd]->fh_lock);
+  lock_acquire(curproc->f_table[fd]->fh_lock);
 
   // Seeking on a console
   if (!VOP_ISSEEKABLE(curproc->f_table[fd]->fh_vnode)) {
@@ -400,7 +400,7 @@ off_t sys_lseek(int fd, off_t pos, int whence, int *err) {
   }
 
   // Release
-  rwlock_release_write(curproc->f_table[fd]->fh_lock);
+  lock_release(curproc->f_table[fd]->fh_lock);
 
   return curproc->f_table[fd]->fh_position;
 
