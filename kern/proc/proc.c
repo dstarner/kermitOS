@@ -93,9 +93,10 @@ proc_create(const char *name) {
 	}
 
 	// Lock and exit stuff
-	proc->e_lock = create_lock("Process lock");
-	proc->e_cv = create_cv("Process CV");
-	proc->can_exit = false;
+	// TODO
+ 	//proc->e_lock = create_lock("Process lock");
+	//proc->e_cv = create_cv("Process CV");
+	//proc->can_exit = false;
 
 	// Get a process ID
 	for (int i=0; i < PID_MAX; i++) {
@@ -218,8 +219,9 @@ proc_destroy(struct proc *proc)
 	}
 
 	// Destroy the synch variables
-	lock_destroy(proc->e_lock);
-	cv_destroy(proc->e_cv);
+        // TODO
+	//lock_destroy(proc->e_lock);
+	//cv_destroy(proc->e_cv);
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
