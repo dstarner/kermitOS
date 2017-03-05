@@ -171,5 +171,7 @@ void sys_exit(int);
 int sys_fork(struct trapframe*, int*);
 void new_thread_start(void *, unsigned long);
 
+int sys_execv(char *, char **, int *);
+
 
 #endif /* _SYSCALL_H_ */

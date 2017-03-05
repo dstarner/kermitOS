@@ -133,12 +133,9 @@ ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
   // Stop writing
   lock_release(curproc->f_table[fd]->fh_lock);
 
-  if (result) {
-    *err = result;
-    return -1;
-  } else {
-    return remaining;
-  }
+  if (result) {*err = result; return -1;}
+
+  return remaining;
 
 };
 
