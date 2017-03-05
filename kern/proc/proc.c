@@ -50,6 +50,7 @@
 #include <vnode.h>
 #include <kern/errno.h>
 #include <syscall.h>
+#include <synch.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -91,24 +92,25 @@ proc_create(const char *name) {
  		proc->f_table[fd] = NULL;
 	}
 
+	// Lock and exit stuff
+	proc->e_lock = create_lock("Process lock");
+	proc->e_cv = create_cv("Process CV");
+	proc->can_exit = false;
+
 	// Get a process ID
 	for (int i=0; i < PID_MAX; i++) {
-
 		// Assign to empty
 		if (procs[i] == NULL) {
 			proc->pid = i;
-
 			procs[i] = proc;
-
 			if (procs[i] == NULL) {
 				return NULL;
 			}
-
 			return proc;
 		}
-
 	}
 
+	// Could not find a process ID
 	return NULL;
 }
 
@@ -214,6 +216,10 @@ proc_destroy(struct proc *proc)
 		}
 		as_destroy(as);
 	}
+
+	// Destroy the synch variables
+	lock_destroy(proc->e_lock);
+	cv_destroy(proc->e_cv);
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
