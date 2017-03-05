@@ -257,7 +257,7 @@ int sys_open(const char *f_name, int flags, mode_t mode, int *err) {
      return -1;
    }
 
-   curproc->f_table[pos_fd]->fh_lock = rwlock_create("file_handler");
+   curproc->f_table[pos_fd]->fh_lock = lock_create("file_handler");
    if (curproc->f_table[pos_fd]->fh_lock == NULL) {
      *err = ENOMEM;
      kfree(filename);
@@ -276,7 +276,7 @@ int sys_open(const char *f_name, int flags, mode_t mode, int *err) {
    if (vnode_fail) {
      *err = vnode_fail;
      kfree(filename);
-     rwlock_destroy(curproc->f_table[pos_fd]->fh_lock);
+     lock_destroy(curproc->f_table[pos_fd]->fh_lock);
      kfree(curproc->f_table[pos_fd]);
      curproc->f_table[pos_fd] = NULL;
      return -1;
@@ -313,7 +313,7 @@ int sys_close(int fd, int *err) {
     vfs_close(curproc->f_table[fd]->fh_vnode);
     // Release and destroy the lock
     lock_release(curproc->f_table[fd]->fh_lock);
-    rwlock_destroy(curproc->f_table[fd]->fh_lock);
+    lock_destroy(curproc->f_table[fd]->fh_lock);
 
     // Free and NULL
     kfree(curproc->f_table[fd]);
