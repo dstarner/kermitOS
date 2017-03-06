@@ -11,6 +11,7 @@
 #include <vnode.h>
 #include <vfs.h>
 #include <copyinout.h>
+#include <kern/wait.h>
 
 
 pid_t sys_getpid() {
@@ -270,20 +271,27 @@ int sys_execv(char *program, char **args, int *err) {
 }
 
 
-void sys_exit(int exitcode) {
+void sys_exit(int exit_code) {
 
-  (void) exitcode;
+  lock_acquire(curproc->e_lock);
+	
+  curproc->can_exit = true;
 
-  // Destroy addressspace
-  as_destroy(curproc->p_addrspace);
-  // Destroy process
-  kfree(procs[curproc->pid]->p_name);
-  curproc->p_addrspace = NULL;
+  curproc->exit_code = _MKWAIT_EXIT(exit_code);
 
-  kfree(procs[curproc->pid]);
-
-  procs[curproc->pid] = NULL;
-  lock_destroy(curproc->e_lock);
+  if (!procs[curproc->parent_pid]->can_exit) {
+    cv_signal(curproc->e_cv, curproc->e_lock);
+    lock_release(curproc->e_lock);
+  } else {
+    cv_destroy(curproc->e_cv);
+    kfree(procs[curproc->pid]);
+    procs[curproc->pid] = NULL;
+    lock_destroy(curproc->e_lock);
+  }
 
   thread_exit();
+
 }
+
+
+

@@ -44,13 +44,13 @@
 
 #include <types.h>
 #include <spl.h>
+#include <synch.h>
 #include <proc.h>
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
 #include <kern/errno.h>
 #include <syscall.h>
-#include <synch.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -94,9 +94,22 @@ proc_create(const char *name) {
 
 	// Lock and exit stuff
 	// TODO
- 	//proc->e_lock = create_lock("Process lock");
-	//proc->e_cv = create_cv("Process CV");
-	//proc->can_exit = false;
+ 	proc->e_lock = lock_create("Process lock");
+	if (proc->e_lock == NULL) {
+		kfree(proc->p_name);
+		kfree(proc);
+		return NULL;
+	}
+	
+	proc->e_cv = cv_create("Process CV");
+	if (proc->e_cv == NULL) {
+		lock_destroy(proc->e_lock);
+		kfree(proc->p_name);
+		kfree(proc);
+		return NULL;
+	}
+
+	proc->can_exit = false;
 
 	// Get a process ID
 	for (int i=0; i < PID_MAX; i++) {
@@ -219,9 +232,8 @@ proc_destroy(struct proc *proc)
 	}
 
 	// Destroy the synch variables
-        // TODO
-	//lock_destroy(proc->e_lock);
-	//cv_destroy(proc->e_cv);
+	lock_destroy(proc->e_lock);
+	cv_destroy(proc->e_cv);
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);

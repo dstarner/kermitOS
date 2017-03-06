@@ -81,9 +81,10 @@ struct proc {
 	pid_t parent_pid;
 
 	// Used for exit and waitpid
-	struct lock * e_lock;
-	struct cv * e_cv;
+	struct lock *e_lock;
+	struct cv *e_cv;
 	bool can_exit;
+	int exit_code;
 };
 
 /* Array of all of the processes */
