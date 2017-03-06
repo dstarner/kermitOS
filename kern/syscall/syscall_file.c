@@ -231,7 +231,7 @@ int sys__getcwd(char *buf, size_t buflen, int *err) {
   getcwd_iovec.iov_len = buflen;
 
   getcwd_uio.uio_iovcnt = 1;
-  getcwd_uio.uio_iov = &cwd_iovec;
+  getcwd_uio.uio_iov = &getcwd_iovec;
   getcwd_uio.uio_segflg = UIO_USERSPACE;
   getcwd_uio.uio_rw = UIO_READ;
   getcwd_uio.uio_space = curproc->p_addrspace;
