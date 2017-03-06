@@ -211,6 +211,41 @@ sys_read(int fd, void *buf, size_t buflen, int * err) {
   };
 };
 
+int sys__getcwd(char *buf, size_t buflen, int *err) {
+
+  if (buf == NULL) {
+    *err = EFAULT;
+    return -1;
+  }
+
+  if (buflen <= 0) {
+    *err = EINVAL;
+    return -1;
+  }
+
+  struct uio getcwd_uio;
+  struct iovec getcwd_iovec;
+  int remaining = 0, failure = 0;
+
+  getcwd_iovec.iov_ubase = (void *)buf;
+  getcwd_iovec.iov_len = buflen;
+
+  getcwd_uio.uio_iovcnt = 1;
+  getcwd_uio.uio_iov = &cwd_iovec;
+  getcwd_uio.uio_segflg = UIO_USERSPACE;
+  getcwd_uio.uio_rw = UIO_READ;
+  getcwd_uio.uio_space = curproc->p_addrspace;
+  getcwd_uio.uio_resid = buflen;
+  remaining = getcwd_uio.uio_resid;
+
+  failure = vfs_getcwd(&getcwd_uio);
+
+  if (failure) {*err = failure; return -1;}
+
+  return remaining - getcwd_uio.uio_resid;
+
+}
+
 int sys_open(const char *f_name, int flags, mode_t mode, int *err) {
 
    // Invalid flags

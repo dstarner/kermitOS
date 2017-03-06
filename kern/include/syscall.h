@@ -158,6 +158,8 @@ off_t sys_lseek(int, off_t, int, int*);
 
 int sys_chdir(const char *, int*);
 
+int sys__getcwd(char, size_t, int*);
+
 /*
 *
 *   PROCESS SYSCALLS
