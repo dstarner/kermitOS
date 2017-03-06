@@ -263,7 +263,16 @@ int sys_open(const char *f_name, int flags, mode_t mode, int *err) {
    // Copy name for file_handle
    char * filename = kmalloc(sizeof(char) * NAME_MAX);
 
+   size_t length;
+
    // Some more setup here i think?
+   int failure = copyinstr((const_userptr_t) f_name, filename, PATH_MAX, &length);
+
+   if (failure) {
+     kfree(filename);
+     *err = EFAULT;
+     return -1;
+   }
 
    // Skip 0, 1, 2 for std in/out/err
    int pos_fd = 3;
