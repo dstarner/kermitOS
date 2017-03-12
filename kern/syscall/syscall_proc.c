@@ -18,7 +18,32 @@ pid_t sys_getpid() {
   return curproc->pid;
 }
 
-void new_thread_start(void *tf, unsigned long addr){
+pid_t sys_waitpid(pid_t pid, int *status, int options) {
+  // Make sure process specified by pid exists
+  if (!procs[pid]) {
+    return -1;
+    // TODO: set errno
+  }
+
+  // Option handling goes here
+  if (options == WNOHANG) {
+    return 0;
+  }
+
+  // If the process with pid can exit already, return the status.
+  while (!procs[pid]->can_exit) {
+    cv_wait(procs[pid]->e_cv, procs[pid]->e_lock);
+  }
+
+  // Update status if status exists
+  if (status != NULL) {
+    *status = _MKWAIT_EXIT(*status);
+  }
+
+  return pid;
+}
+
+void new_thread_start(void *tf, unsigned long addr) {
 
   struct trapframe user_frame;
   struct trapframe* new_tf = (struct trapframe*) tf;
@@ -42,7 +67,6 @@ void new_thread_start(void *tf, unsigned long addr){
 }
 
 int sys_fork(struct trapframe* tf, int *err) {
-
   // Things we will need later
   int failure = 0;
   struct proc* new_proc;
@@ -56,8 +80,13 @@ int sys_fork(struct trapframe* tf, int *err) {
     return -1;
   }
 
+  // Copy trapframe from old process
   memcpy(new_tf, tf, sizeof(struct trapframe));
+
+  // Copy address space from old process
   failure = as_copy(curproc->p_addrspace, &new_addr);
+
+  // Error checking
   if(new_addr == NULL){
     kfree(new_tf);
     *err = ENOMEM;
@@ -81,9 +110,7 @@ int sys_fork(struct trapframe* tf, int *err) {
   VOP_INCREF(curproc->p_cwd);
   curproc->p_numthreads++;
   return failure;
-
 }
-
 
 int sys_execv(char *program, char **args, int *err) {
   struct addrspace *as;          // Address space for program
@@ -270,11 +297,9 @@ int sys_execv(char *program, char **args, int *err) {
 
 }
 
-
 void sys_exit(int exit_code) {
-
   lock_acquire(curproc->e_lock);
-	
+
   curproc->can_exit = true;
 
   curproc->exit_code = _MKWAIT_EXIT(exit_code);
@@ -292,6 +317,3 @@ void sys_exit(int exit_code) {
   thread_exit();
 
 }
-
-
-

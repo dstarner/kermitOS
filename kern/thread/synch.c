@@ -317,7 +317,13 @@ void
 cv_wait(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	cv_sanity_check(cv, lock); // Run sanity check.
+	// Sanity checks
+	// Make sure components exist
+	KASSERT(cv != NULL);
+	KASSERT(lock != NULL);
+
+	// Make sure the lock is currently acquired by the CV
+	KASSERT(lock_do_i_hold(lock));
 
 	// Release the supplied lock, go to sleep, and then when you wake up re-acquire the lock.
 	spinlock_acquire(&cv->cv_lock);
@@ -335,7 +341,13 @@ void
 cv_signal(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	cv_sanity_check(cv, lock); // Run sanity check.
+	// Sanity checks
+	// Make sure components exist
+	KASSERT(cv != NULL);
+	KASSERT(lock != NULL);
+
+	// Make sure the lock is currently acquired by the CV
+	KASSERT(lock_do_i_hold(lock));
 
 	// Make sure only 1 wchan is woken up at a time
 	spinlock_acquire(&cv->cv_lock);
@@ -349,24 +361,19 @@ void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	cv_sanity_check(cv, lock); // Run sanity check.
-
-	spinlock_acquire(&cv->cv_lock);
-
-	wchan_wakeall(cv->cv_wchan, &cv->cv_lock); // Wake all threads on CV's wchan.
-
-	spinlock_release(&cv->cv_lock);
-}
-
-void
-cv_sanity_check(struct cv *cv, struct lock *lock)
-{
+	// Sanity checks
 	// Make sure components exist
 	KASSERT(cv != NULL);
 	KASSERT(lock != NULL);
 
 	// Make sure the lock is currently acquired by the CV
 	KASSERT(lock_do_i_hold(lock));
+
+	spinlock_acquire(&cv->cv_lock);
+
+	wchan_wakeall(cv->cv_wchan, &cv->cv_lock); // Wake all threads on CV's wchan.
+
+	spinlock_release(&cv->cv_lock);
 }
 
 struct rwlock *
