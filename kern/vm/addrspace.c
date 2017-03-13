@@ -70,8 +70,8 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	/*
 	 * Write this.
 	 */
-
-	(void)old;
+	// Copy memory from old addrspace to new addrspace
+	memcpy(newas, old, sizeof(struct addrspace));
 
 	*ret = newas;
 	return 0;
@@ -179,4 +179,3 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 	return 0;
 }
-

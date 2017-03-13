@@ -35,28 +35,17 @@
 struct trapframe; /* from <machine/trapframe.h> */
 
 struct f_handler {
-
-    // Lock for logistics
-    struct lock *fh_lock;
-
-    // Vnode for where memory is.
-    struct vnode *fh_vnode;
-
-    // Reference count for what is using file
-    unsigned int ref_count;
-
-    // File permissions
-    mode_t fh_perms;
-
-    // Current file position/offset
-    off_t fh_position;
+    struct lock *fh_lock;   // Lock for logistics
+    struct vnode *fh_vnode; // Vnode for where memory is.
+    unsigned int ref_count; // Reference count for what is using file
+    mode_t fh_perms;        // File permissions
+    off_t fh_position;      // Current file position/offset
 
 };
 
 /*
  * The system call dispatcher.
  */
-
 void syscall(struct trapframe *tf);
 
 /*
@@ -146,13 +135,11 @@ void init_std(void);
 */
 ssize_t sys_read(int, void *, size_t, int *);
 
-
 int sys_open(const char*, int, mode_t, int *);
 
 int sys_close(int, int *);
 
 int dup2(int, int, int *);
-
 
 off_t sys_lseek(int, off_t, int, int*);
 
@@ -161,19 +148,18 @@ int sys_chdir(const char *, int*);
 int sys__getcwd(char *, size_t, int*);
 
 /*
-*
 *   PROCESS SYSCALLS
-*
 */
-
 pid_t sys_getpid(void);
+
+pid_t sys_waitpid(pid_t, int *, int);
 
 void sys_exit(int);
 
 int sys_fork(struct trapframe*, int*);
+
 void new_thread_start(void *, unsigned long);
 
 int sys_execv(char *, char **, int *);
-
 
 #endif /* _SYSCALL_H_ */
