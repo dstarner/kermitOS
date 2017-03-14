@@ -152,9 +152,9 @@ int sys__getcwd(char *, size_t, int*);
 */
 pid_t sys_getpid(void);
 
-pid_t sys_waitpid(pid_t, int *, int);
+pid_t sys_waitpid(pid_t, int *, int, int *);
 
-void sys_exit(int);
+void sys_exit(int, bool);
 
 int sys_fork(struct trapframe*, int*);
 

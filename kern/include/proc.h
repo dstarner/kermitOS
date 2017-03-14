@@ -88,7 +88,7 @@ struct proc {
 };
 
 /* Array of all of the processes */
-extern struct proc *procs[PID_MAX];
+extern struct proc *procs[128];
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;

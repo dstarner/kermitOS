@@ -57,7 +57,7 @@
  */
 struct proc *kproc;
 
-struct proc *procs[PID_MAX];
+struct proc *procs[128];
 
 
 /*
@@ -112,7 +112,7 @@ proc_create(const char *name) {
 	proc->can_exit = false;
 
 	// Get a process ID
-	for (int i=0; i < PID_MAX; i++) {
+	for (int i=0; i < 128; i++) {
 		// Assign to empty
 		if (procs[i] == NULL) {
 			proc->pid = i;

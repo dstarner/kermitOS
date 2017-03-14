@@ -18,11 +18,10 @@ pid_t sys_getpid() {
   return curproc->pid;
 }
 
-pid_t sys_waitpid(pid_t pid, int *status, int options) {
+pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
   // Make sure process specified by pid exists
   if (!procs[pid]) {
-    return -1;
-    // TODO: set errno
+    return 0;
   }
 
   // Option handling goes here
@@ -30,15 +29,52 @@ pid_t sys_waitpid(pid_t pid, int *status, int options) {
     return 0;
   }
 
-  // If the process with pid can exit already, return the status.
-  while (!procs[pid]->can_exit) {
-    cv_wait(procs[pid]->e_cv, procs[pid]->e_lock);
+  // If invalid PID
+  if (pid < 0 || pid > 127) {
+    *err = ESRCH;
+    return -1;
   }
 
-  // Update status if status exists
-  if (status != NULL) {
-    *status = _MKWAIT_EXIT(*status);
+  // If PID process is NULL
+  if (procs[pid] == NULL) {
+    *err = ESRCH;
+    return -1;
   }
+
+  // Make sure current proc is a parent of PID process
+  if (curproc->pid != procs[pid]->parent_pid) {
+    *err = ECHILD;
+    return -1;
+  }
+
+  lock_acquire(procs[pid]->e_lock);
+
+  // If the process with pid can exit already, return the status.
+  if (!procs[pid]->can_exit) {
+
+    cv_wait(procs[pid]->e_cv, procs[pid]->e_lock);
+    // cv_wait(curproc->e_cv, curproc->e_lock);
+  } 
+
+  // Update status if status exists
+  *status = procs[pid]->exit_code;
+
+  // Release the lock
+  lock_release(procs[pid]->e_lock);
+
+  // We Good to clean up and destroy the parent
+  // Destroy Addrspace
+  as_destroy(procs[pid]->p_addrspace);
+  procs[pid]->p_addrspace = NULL;
+
+  // Destroy synch stuff
+  cv_destroy(procs[pid]->e_cv);
+  lock_destroy(procs[pid]->e_lock);
+
+  // Destroy proc
+  kfree(procs[pid]->p_name);
+  kfree(procs[pid]);
+  procs[pid] = NULL;
 
   return pid;
 }
@@ -297,21 +333,49 @@ int sys_execv(char *program, char **args, int *err) {
 
 }
 
-void sys_exit(int exit_code) {
+void sys_exit(int exit_code, bool fatal_signal) {
+  
+  // Get the lock
   lock_acquire(curproc->e_lock);
 
+  // Let parent know that it is trying to exit
   curproc->can_exit = true;
 
-  curproc->exit_code = _MKWAIT_EXIT(exit_code);
+  // Handle fatal signal or clean exit
+  if (fatal_signal) {
+    curproc->exit_code = _MKWAIT_SIG(exit_code);
+  } else {
+    curproc->exit_code = _MKWAIT_EXIT(exit_code);
+  }
+
+  // Close out all of the current files
+  for (int fd = 0; fd < OPEN_MAX; fd++) {
+    int dummy_error = 0;  // We need to pass a fake val
+    sys_close(fd, &dummy_error);
+  }
 
   if (!procs[curproc->parent_pid]->can_exit) {
-    cv_signal(curproc->e_cv, curproc->e_lock);
+    // Let all the waiting processes know that we are waiting.
+    cv_broadcast(curproc->e_cv, curproc->e_lock);
     lock_release(curproc->e_lock);
+  
   } else {
+
+    // Release the lock
+    lock_release(curproc->e_lock);
+
+    // DESTROY IT ALL! (I'm tired and just want this shit to work)
     cv_destroy(curproc->e_cv);
+    lock_destroy(curproc->e_lock);
+    
+    // Destroy Address space
+    as_destroy(curproc->p_addrspace);
+    curproc->p_addrspace = NULL;
+
+    // Destory proc
+    kfree(procs[curproc->pid]->p_name);
     kfree(procs[curproc->pid]);
     procs[curproc->pid] = NULL;
-    lock_destroy(curproc->e_lock);
   }
 
   thread_exit();
