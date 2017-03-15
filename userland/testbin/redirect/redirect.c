@@ -152,8 +152,13 @@ cat(void)
 
 	if (pid == 0) {
 		/* child */
+		printf("Before first dup2");
 		dodup2(rfd, STDIN_FILENO, INFILE);
+
+		printf("After first dup2");
 		dodup2(wfd, STDOUT_FILENO, OUTFILE);
+
+		printf("After second dup2");
 		doclose(rfd, INFILE);
 		doclose(wfd, OUTFILE);
 		args[0] = "cat";

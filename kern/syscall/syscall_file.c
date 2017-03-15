@@ -499,15 +499,18 @@ int dup2(int oldfd, int newfd, int * err) {
   // If the old fd is empty then it doesn't work either.
   if (close_error || curproc->f_table[oldfd] == NULL) {
     *err = EBADF;
+    lock_release(curproc->f_table[oldfd]->fh_lock);
     return -1;
   }
 
-  // Set pointer of newfd to that of oldfd
+  // TODO: Clone file descriptor
+  // Copy pointer over from old fd.
   curproc->f_table[newfd] = curproc->f_table[oldfd];
+  curproc->f_table[oldfd]->ref_count++;
 
   // End critical section
   lock_release(curproc->f_table[oldfd]->fh_lock);
 
-  return 0;
+  return newfd;
 
 }
