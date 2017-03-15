@@ -128,6 +128,10 @@ syscall(struct trapframe *tf)
 			retval = sys_close((int)tf->tf_a0, &err);
 			break;
 
+		case SYS_dup2:
+			retval = dup2((int)tf->tf_a0, (int)tf->tf_a1, &err);
+			break;
+
 		case SYS_lseek:
 			pos = tf->tf_a2;
       			pos <<= 32;

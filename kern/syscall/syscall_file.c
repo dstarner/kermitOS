@@ -364,7 +364,7 @@ int sys_close(int fd, int *err) {
   return 0;
 }
 
-off_t sys_lseek(int fd, off_t pos, int whence, int *err) {
+off_t sys_lseek(int fd, off_t pos, int whence, int * err) {
   // Bad fd
   if (fd < 0 || fd > OPEN_MAX) {
     *err = EBADF;
@@ -442,7 +442,7 @@ off_t sys_lseek(int fd, off_t pos, int whence, int *err) {
 
 }
 
-int sys_chdir(const char * path, int *err) {
+int sys_chdir(const char * path, int * err) {
   // Pathname for kernel space
   char * pathname = kmalloc(sizeof(char) * PATH_MAX);
 
@@ -474,17 +474,40 @@ int sys_chdir(const char * path, int *err) {
 }
 
 int dup2(int oldfd, int newfd, int * err) {
+  // Make sure the fd is at a valid index.
   if ((oldfd < 0 || oldfd > OPEN_MAX) || (newfd < 0 || newfd > OPEN_MAX)) {
     *err = EBADF;
     return -1;
   }
 
-  if (curproc->f_table[oldfd] == NULL) {
+  // Using dup2 to clone a file handle onto itself has no effect
+  if (oldfd == newfd) {
+    return 0;
+  }
+
+
+  // If the new fd already exists, close the file first
+  int *close_error = 0;
+  if (curproc->f_table[newfd] != NULL) {
+    sys_close(newfd, close_error);
+  }
+
+  // Start Critical section for oldfd
+  lock_acquire(curproc->f_table[oldfd]->fh_lock);
+
+  // If the file could not be closed for some reason.
+  // If the old fd is empty then it doesn't work either.
+  if (close_error || curproc->f_table[oldfd] == NULL) {
     *err = EBADF;
     return -1;
   }
 
-  // Copy the actual file
+  // Set pointer of newfd to that of oldfd
+  curproc->f_table[newfd] = curproc->f_table[oldfd];
+
+  // End critical section
+  lock_release(curproc->f_table[oldfd]->fh_lock);
+
   return 0;
 
 }
