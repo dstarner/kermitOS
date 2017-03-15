@@ -19,9 +19,35 @@ pid_t sys_getpid() {
 }
 
 pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
+
+  if (pid < 0 || pid > 256) {
+    *err = ESRCH;
+    return -1;
+  }
+
   // Make sure process specified by pid exists
-  if (!procs[pid]) {
+  if (procs[pid] == NULL) {
     return 0;
+  }
+
+  if(status == (int*) 0x0) {
+    return 0;
+  }
+
+  if(status == (int*) 0x40000000 || status == (int*) 0x80000000 || ((int)status & 3) != 0) {
+    *err = EFAULT;
+    return -1;
+  }
+
+  if (options != 0 && options != WNOHANG && options != WUNTRACED) {
+    *err = EINVAL;
+    return -1;
+  }
+  
+  // Make sure current proc is a parent of PID process
+  if (curproc->pid != procs[pid]->parent_pid) {
+    *err = ECHILD;
+    return -1;
   }
 
   // Option handling goes here
@@ -41,11 +67,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
     return -1;
   }
 
-  // Make sure current proc is a parent of PID process
-  if (curproc->pid != procs[pid]->parent_pid) {
-    *err = ECHILD;
-    return -1;
-  }
 
   lock_acquire(procs[pid]->e_lock);
 

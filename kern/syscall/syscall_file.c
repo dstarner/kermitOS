@@ -76,7 +76,7 @@ void init_std() {
 ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
 
   // Check if valid index
-  if (fd < 0 || fd > OPEN_MAX) {
+  if (fd < 0 || fd >= OPEN_MAX) {
     *err = EBADF;
     return -1;
   }
@@ -141,7 +141,7 @@ ssize_t sys_write(int fd, void *buf, size_t buflen, int * err) {
 ssize_t sys_read(int fd, void *buf, size_t buflen, int * err) {
 
   // Check if valid index
-  if (fd < 0 || fd > OPEN_MAX) {
+  if (fd < 0 || fd >= OPEN_MAX) {
     *err = EBADF;
     return -1;
   }
@@ -328,7 +328,7 @@ int sys_open(const char *f_name, int flags, mode_t mode, int *err) {
 
 int sys_close(int fd, int *err) {
   // Check valid fd
-  if (fd < 0 || fd > OPEN_MAX) {
+  if (fd < 0 || fd >= OPEN_MAX) {
     *err = EBADF;
     return -1;
   }
@@ -366,7 +366,7 @@ int sys_close(int fd, int *err) {
 
 off_t sys_lseek(int fd, off_t pos, int whence, int * err) {
   // Bad fd
-  if (fd < 0 || fd > OPEN_MAX) {
+  if (fd < 3 || fd >= OPEN_MAX) {
     *err = EBADF;
     return -1;
   }
