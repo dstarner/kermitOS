@@ -39,6 +39,7 @@
 #include <synch.h>
 #include <thread.h>
 #include <proc.h>
+#include <current.h>
 #include <vfs.h>
 #include <sfs.h>
 #include <syscall.h>
@@ -132,6 +133,8 @@ common_prog(int nargs, char **args)
 
 	tc = thread_count;
 
+        proc->parent_pid = curproc->pid;
+
 	result = thread_fork(args[0] /* thread name */,
 			proc /* new process */,
 			cmd_progthread /* thread function */,
@@ -147,9 +150,16 @@ common_prog(int nargs, char **args)
 	 * once you write the code for handling that.
 	 */
 
+        int status, error;
+
+        sys_waitpid(proc->pid, &status, 0, &error);
+
 	// Wait for all threads to finish cleanup, otherwise khu be a bit behind,
 	// especially once swapping is enabled.
 	thread_wait_for_count(tc);
+
+        thread_wait_for_count(tc);
+
 
 	return 0;
 }

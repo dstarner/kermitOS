@@ -160,6 +160,7 @@ int sys_execv(char *program, char **args, int *err) {
     return -1;
   }
 
+
   /* Copy into kernelspace */
   char *name_copy = (char *) kmalloc(sizeof(char) * NAME_MAX);
   size_t actual = 0;
@@ -212,6 +213,7 @@ int sys_execv(char *program, char **args, int *err) {
       *err = EFAULT;
       return -1;
     }
+    copied_args++;
   }
 
   // Padding is how much to change the stack pointer
