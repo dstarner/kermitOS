@@ -43,7 +43,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
     *err = EINVAL;
     return -1;
   }
-  
+
   // Make sure current proc is a parent of PID process
   if (curproc->pid != procs[pid]->parent_pid) {
     *err = ECHILD;
@@ -357,11 +357,15 @@ int sys_execv(char *program, char **args, int *err) {
 }
 
 void sys_exit(int exit_code, bool fatal_signal) {
+  kprintf("exit call start\n");
+
   // Get the lock
   lock_acquire(curproc->e_lock);
+  kprintf("exit call lock acquire\n");
 
   // Let parent know that it is trying to exit
   curproc->can_exit = true;
+  kprintf("exit call can exit\n");
 
   // Handle fatal signal or clean exit
   if (fatal_signal) {
@@ -369,36 +373,43 @@ void sys_exit(int exit_code, bool fatal_signal) {
   } else {
     curproc->exit_code = _MKWAIT_EXIT(exit_code);
   }
-
-  // Close out all of the current files
-  for (int fd = 0; fd < OPEN_MAX; fd++) {
-    int dummy_error = 0;  // We need to pass a fake val
-    sys_close(fd, &dummy_error);
-  }
+  kprintf("exit call fatal signal\n");
 
   if (!procs[curproc->parent_pid]->can_exit) {
     // Let all the waiting processes know that we are waiting.
     cv_broadcast(curproc->e_cv, curproc->e_lock);
-    lock_release(curproc->e_lock);
+    kprintf("exit call broooadcast\n");
 
-  } else {
-    // Release the lock
-    lock_release(curproc->e_lock);
-
-    // DESTROY IT ALL! (I'm tired and just want this shit to work)
-    cv_destroy(curproc->e_cv);
-    lock_destroy(curproc->e_lock);
-
-    // Destroy Address space
-    as_destroy(curproc->p_addrspace);
-    curproc->p_addrspace = NULL;
-
-    // Destory proc
-    kfree(procs[curproc->pid]->p_name);
-    kfree(procs[curproc->pid]);
-    procs[curproc->pid] = NULL;
+  // } else {
+  //   kprintf("exit call exit cleanup\n");
+  //
+  //   // Close out all of the current files
+  //   for (int fd = 0; fd < OPEN_MAX; fd++) {
+  //     int close_error = 0;  // We need to pass a fake val
+  //     sys_close(fd, &close_error);
+  //     kprintf("exit call close file\n");
+  //   }
+  //
+  //   // kprintf("exit call close files\n");
+  //   // Release the lock
+  //   lock_release(curproc->e_lock);
+  //
+  //   // DESTROY IT ALL! (I'm tired and just want this shit to work)
+  //   cv_destroy(curproc->e_cv);
+  //   lock_destroy(curproc->e_lock);
+  //
+  //   // Destroy Address space
+  //   as_destroy(curproc->p_addrspace);
+  //   curproc->p_addrspace = NULL;
+  //
+  //   // Destory proc
+  //   kfree(procs[curproc->pid]->p_name);
+  //   kfree(procs[curproc->pid]);
+  //   procs[curproc->pid] = NULL;
   }
 
+  kprintf("exit call end\n");
+  lock_release(curproc->e_lock);
   thread_exit();
 
 }
