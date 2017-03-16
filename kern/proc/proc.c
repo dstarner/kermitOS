@@ -93,7 +93,6 @@ proc_create(const char *name) {
 	}
 
 	// Lock and exit stuff
-	// TODO
  	proc->e_lock = lock_create("Process lock");
 	if (proc->e_lock == NULL) {
 		kfree(proc->p_name);
@@ -110,6 +109,7 @@ proc_create(const char *name) {
 	}
 
 	proc->can_exit = false;
+        proc->parent_pid = -1;
 
 	// Get a process ID
 	for (int i=0; i < 128; i++) {
