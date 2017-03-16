@@ -233,6 +233,8 @@ int sys_execv(char *program, char **args, int *err) {
       *err = EFAULT;
       return -1;
     }
+    copied_args++;
+
   }
 
   // Padding is how much to change the stack pointer
