@@ -475,7 +475,13 @@ int sys_chdir(const char * path, int * err) {
 
 int dup2(int oldfd, int newfd, int * err) {
   // Make sure the fd is at a valid index.
-  if ((oldfd < 0 || oldfd > OPEN_MAX) || (newfd < 0 || newfd > OPEN_MAX)) {
+  if ((oldfd < 0 || oldfd >= OPEN_MAX) || (newfd < 0 || newfd >= OPEN_MAX)) {
+    *err = EBADF;
+    return -1;
+  }
+
+  // If the old fd doesn't exist, its bad
+  if (curproc->f_table[oldfd] == NULL) {
     *err = EBADF;
     return -1;
   }
@@ -484,7 +490,6 @@ int dup2(int oldfd, int newfd, int * err) {
   if (oldfd == newfd) {
     return newfd;
   }
-
 
   // If the new fd already exists, close the file first
   int *close_error = 0;
