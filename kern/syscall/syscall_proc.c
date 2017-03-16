@@ -15,158 +15,158 @@
 
 
 pid_t sys_getpid() {
-  return curproc->pid;
+	return curproc->pid;
 }
 
 pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 
-  if (pid < 0 || pid > 256) {
-    *err = ESRCH;
-    return -1;
-  }
+	if (pid < 0 || pid > 256) {
+		*err = ESRCH;
+		return -1;
+	}
 
-  // Make sure process specified by pid exists
-  if (procs[pid] == NULL) {
-    return 0;
-  }
+	// Make sure process specified by pid exists
+	if (procs[pid] == NULL) {
+		return 0;
+	}
 
-  if(status == (int*) 0x0) {
-    return 0;
-  }
+	if(status == (int*) 0x0) {
+		return 0;
+	}
 
-  if(status == (int*) 0x40000000 || status == (int*) 0x80000000 || ((int)status & 3) != 0) {
-    *err = EFAULT;
-    return -1;
-  }
+	if(status == (int*) 0x40000000 || status == (int*) 0x80000000 || ((int)status & 3) != 0) {
+		*err = EFAULT;
+		return -1;
+	}
 
-  if (options != 0 && options != WNOHANG && options != WUNTRACED) {
-    *err = EINVAL;
-    return -1;
-  }
+	if (options != 0 && options != WNOHANG && options != WUNTRACED) {
+		*err = EINVAL;
+		return -1;
+	}
 
-  // Make sure current proc is a parent of PID process
-  if (curproc->pid != procs[pid]->parent_pid) {
-    *err = ECHILD;
-    return -1;
-  }
+	// Make sure current proc is a parent of PID process
+	if (curproc->pid != procs[pid]->parent_pid) {
+		*err = ECHILD;
+		return -1;
+	}
 
-  // Option handling goes here
-  if (options == WNOHANG) {
-    return 0;
-  }
+	// Option handling goes here
+	if (options == WNOHANG) {
+		return 0;
+	}
 
-  // If invalid PID
-  if (pid < 0 || pid > 127) {
-    *err = ESRCH;
-    return -1;
-  }
+	// If invalid PID
+	if (pid < 0 || pid > 127) {
+		*err = ESRCH;
+		return -1;
+	}
 
-  // If PID process is NULL
-  if (procs[pid] == NULL) {
-    *err = ESRCH;
-    return -1;
-  }
+	// If PID process is NULL
+	if (procs[pid] == NULL) {
+		*err = ESRCH;
+		return -1;
+	}
 
 
-  lock_acquire(procs[pid]->e_lock);
+	lock_acquire(procs[pid]->e_lock);
 
-  // If the process with pid can exit already, return the status.
-  if (!procs[pid]->can_exit) {
+	// If the process with pid can exit already, return the status.
+	if (!procs[pid]->can_exit) {
 
-    cv_wait(procs[pid]->e_cv, procs[pid]->e_lock);
-    // cv_wait(curproc->e_cv, curproc->e_lock);
-  }
+		cv_wait(procs[pid]->e_cv, procs[pid]->e_lock);
+		// cv_wait(curproc->e_cv, curproc->e_lock);
+	}
 
-  // Update status if status exists
-  *status = procs[pid]->exit_code;
+	// Update status if status exists
+	*status = procs[pid]->exit_code;
 
-  // Release the lock
-  lock_release(procs[pid]->e_lock);
+	// Release the lock
+	lock_release(procs[pid]->e_lock);
 
-  // We Good to clean up and destroy the parent
-  // Destroy Addrspace
-  as_destroy(procs[pid]->p_addrspace);
-  procs[pid]->p_addrspace = NULL;
+	// We Good to clean up and destroy the parent
+	// Destroy Addrspace
+	as_destroy(procs[pid]->p_addrspace);
+	procs[pid]->p_addrspace = NULL;
 
-  // Destroy synch stuff
-  cv_destroy(procs[pid]->e_cv);
-  lock_destroy(procs[pid]->e_lock);
+	// Destroy synch stuff
+	cv_destroy(procs[pid]->e_cv);
+	lock_destroy(procs[pid]->e_lock);
 
-  // Destroy proc
-  kfree(procs[pid]->p_name);
-  kfree(procs[pid]);
-  procs[pid] = NULL;
+	// Destroy proc
+	kfree(procs[pid]->p_name);
+	kfree(procs[pid]);
+	procs[pid] = NULL;
 
-  return pid;
+	return pid;
 }
 
 void new_thread_start(void *tf, unsigned long addr) {
 
-  struct trapframe user_frame;
-  struct trapframe* new_tf = (struct trapframe*) tf;
-  struct addrspace* new_addr = (struct addrspace*) addr;
+	struct trapframe user_frame;
+	struct trapframe* new_tf = (struct trapframe*) tf;
+	struct addrspace* new_addr = (struct addrspace*) addr;
 
-  // Set up the new trapframe
-  new_tf->tf_v0 = 0;
-  new_tf->tf_a3 = 0;
-  new_tf->tf_epc += 4;
+	// Set up the new trapframe
+	new_tf->tf_v0 = 0;
+	new_tf->tf_a3 = 0;
+	new_tf->tf_epc += 4;
 
-  // Copy from kern to user frame
-  memcpy(&user_frame, new_tf, sizeof(struct trapframe));
-  kfree(new_tf);
-  new_tf = NULL;
-  curproc->p_addrspace = new_addr;
-  as_activate();
+	// Copy from kern to user frame
+	memcpy(&user_frame, new_tf, sizeof(struct trapframe));
+	kfree(new_tf);
+	new_tf = NULL;
+	curproc->p_addrspace = new_addr;
+	as_activate();
 
-  // To user mode we gooooo!!!!!
-  mips_usermode(&user_frame);
+	// To user mode we gooooo!!!!!
+	mips_usermode(&user_frame);
 
 }
 
 int sys_fork(struct trapframe* tf, int *err) {
-  // Things we will need later
-  int failure = 0;
-  struct proc* new_proc;
-  struct addrspace* new_addr = NULL;
-  struct trapframe* new_tf = NULL;
+	// Things we will need later
+	int failure = 0;
+	struct proc* new_proc;
+	struct addrspace* new_addr = NULL;
+	struct trapframe* new_tf = NULL;
 
-  // Create new trapframe
-  new_tf = kmalloc(sizeof(struct trapframe));
-  if(new_tf == NULL){
-    *err = ENOMEM;
-    return -1;
-  }
+	// Create new trapframe
+	new_tf = kmalloc(sizeof(struct trapframe));
+	if(new_tf == NULL){
+		*err = ENOMEM;
+		return -1;
+	}
 
-  // Copy trapframe from old process
-  memcpy(new_tf, tf, sizeof(struct trapframe));
+	// Copy trapframe from old process
+	memcpy(new_tf, tf, sizeof(struct trapframe));
 
-  // Copy address space from old process
-  failure = as_copy(curproc->p_addrspace, &new_addr);
+	// Copy address space from old process
+	failure = as_copy(curproc->p_addrspace, &new_addr);
 
-  // Error checking
-  if(new_addr == NULL){
-    kfree(new_tf);
-    *err = ENOMEM;
-    return -1;
-  }
+	// Error checking
+	if(new_addr == NULL){
+		kfree(new_tf);
+		*err = ENOMEM;
+		return -1;
+	}
 
-  new_proc = proc_new_child("proc_child");
-  if(new_proc == NULL){
-    kfree(new_tf);
-    *err = ENOMEM;
-    return -1;
-  }
+	new_proc = proc_new_child("proc_child");
+	if(new_proc == NULL){
+		kfree(new_tf);
+		*err = ENOMEM;
+		return -1;
+	}
 
-  failure = thread_fork("process", new_proc, new_thread_start, new_tf, (unsigned long) new_addr);
-  if (failure) {
-    return failure;
-  }
+	failure = thread_fork("process", new_proc, new_thread_start, new_tf, (unsigned long) new_addr);
+	if (failure) {
+		return failure;
+	}
 
-  failure = new_proc->pid;
-  new_proc->p_cwd = curproc->p_cwd;
-  VOP_INCREF(curproc->p_cwd);
-  curproc->p_numthreads++;
-  return failure;
+	failure = new_proc->pid;
+	new_proc->p_cwd = curproc->p_cwd;
+	VOP_INCREF(curproc->p_cwd);
+	curproc->p_numthreads++;
+	return failure;
 }
 
 int sys_execv(char *program, char **args, int *err) {
