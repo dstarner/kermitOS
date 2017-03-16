@@ -327,22 +327,27 @@ int sys_open(const char *f_name, int flags, mode_t mode, int *err) {
  }
 
 int sys_close(int fd, int *err) {
+  kprintf("sys_close start\n");
   // Check valid fd
   if (fd < 0 || fd >= OPEN_MAX) {
     *err = EBADF;
     return -1;
   }
 
+  kprintf("sys_close checkpoint 1\n");
   if (curproc->f_table[fd] == NULL) {
     *err = EBADF;
     return -1;
   }
 
+  kprintf("sys_close checkpoint 2\n");
   // Acquire write so we know we are the only ones messing with it.
   lock_acquire(curproc->f_table[fd]->fh_lock);
 
   // Reduce the number of threads using it.
   curproc->f_table[fd]->ref_count--;
+
+  kprintf("sys_close checkpoint 3\n");
 
   // If nothing else is using it.
   if (curproc->f_table[fd]->ref_count == 0) {
@@ -356,25 +361,33 @@ int sys_close(int fd, int *err) {
     kfree(curproc->f_table[fd]);
     curproc->f_table[fd] = NULL;
 
+    kprintf("sys_close checkpoint 4\n");
   } else {
     // Just release and move on
     lock_release(curproc->f_table[fd]->fh_lock);
+
+    kprintf("sys_close checkpoint 4a\n");
   }
 
+  kprintf("sys_close end\n");
   return 0;
 }
 
 off_t sys_lseek(int fd, off_t pos, int whence, int * err) {
+  kprintf("lseek start\n");
   // Bad fd
   if (fd < 3 || fd >= OPEN_MAX) {
     *err = EBADF;
     return -1;
   }
 
+  kprintf("lseek checkpoint 1\n");
   if (curproc->f_table[fd] == NULL) {
     *err = EBADF;
     return -1;
   }
+
+  kprintf("lseek checkpoint 2\n");
 
   // Bad whence
   if (!(whence == SEEK_SET || whence == SEEK_END || whence == SEEK_CUR)) {
@@ -383,46 +396,56 @@ off_t sys_lseek(int fd, off_t pos, int whence, int * err) {
   }
 
 
+  kprintf("lseek checkpoint 3\n");
   lock_acquire(curproc->f_table[fd]->fh_lock);
 
   // Seeking on a console
   if (!VOP_ISSEEKABLE(curproc->f_table[fd]->fh_vnode)) {
+    lock_release(curproc->f_table[fd]->fh_lock);
     *err = ESPIPE;
     return -1;
   }
 
+  kprintf("lseek find current fofset\n");
   // Easy to remember current offset
   off_t cur_pos = curproc->f_table[fd]->fh_position;
 
   // Get end of file
   struct stat stats;
+
+  kprintf("lseek get length of file\n");
   int failure = VOP_STAT(curproc->f_table[fd]->fh_vnode, &stats);
 
   if (failure) {
+    lock_release(curproc->f_table[fd]->fh_lock);
     *err = EINVAL;
     return -1;
   }
 
   // The total size of the file
   off_t file_size = stats.st_size;
+  kprintf("lseek end length of file\n");
 
   // Check if valid new position
   if (whence == SEEK_SET && pos < 0) {
+    lock_release(curproc->f_table[fd]->fh_lock);
     *err = EINVAL;
     return -1;
   }
 
-
   if (whence == SEEK_CUR && cur_pos + pos < 0) {
+    lock_release(curproc->f_table[fd]->fh_lock);
     *err = EINVAL;
     return -1;
   }
 
   if (whence == SEEK_END && file_size + pos < 0) {
+    lock_release(curproc->f_table[fd]->fh_lock);
     *err = EINVAL;
     return -1;
   }
 
+  kprintf("lseek updating position\n");
   // Update position
   if (whence == SEEK_END) {
     // Go to end of file
@@ -435,9 +458,12 @@ off_t sys_lseek(int fd, off_t pos, int whence, int * err) {
     curproc->f_table[fd]->fh_position = pos;
   }
 
+  kprintf("lseek end update position\n");
+
   // Release
   lock_release(curproc->f_table[fd]->fh_lock);
 
+  kprintf("lseek end\n");
   return curproc->f_table[fd]->fh_position;
 
 }
