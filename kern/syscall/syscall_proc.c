@@ -43,7 +43,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
     *err = EINVAL;
     return -1;
   }
-  
+
   // Make sure current proc is a parent of PID process
   if (curproc->pid != procs[pid]->parent_pid) {
     *err = ECHILD;
@@ -201,12 +201,14 @@ int sys_execv(char *program, char **args, int *err) {
 
   if (strlen(name_copy) == 0) {
     *err = EINVAL;
+    kfree(name_copy);
     return -1;
   }
 
   // Make sure valid pointers
   if ((int *)args == (int *)0x40000000 || (int *)args == (int *)0x80000000) {
     *err = EFAULT;
+    kfree(name_copy);
     return -1;
   }
 
@@ -218,7 +220,8 @@ int sys_execv(char *program, char **args, int *err) {
     // Make sure its within number of args
     if (num_of_args > ARG_MAX) {
       *err = E2BIG;
-    return -1;
+      kfree(name_copy);
+      return -1;
     }
   }
 
@@ -231,6 +234,7 @@ int sys_execv(char *program, char **args, int *err) {
   while (copied_args < num_of_args) {
     if ((int *)args[copied_args] == (int *)0x40000000 || (int *)args[copied_args] == (int *)0x80000000) {
       *err = EFAULT;
+      kfree(name_copy);
       return -1;
     }
     copied_args++;
@@ -250,9 +254,7 @@ int sys_execv(char *program, char **args, int *err) {
 
     // Make sure that the padding is correctly allocated
     padding += arg_size;
-    if (padding % 4) {
-      padding += (4 - (padding % 4)) % 4;
-    }
+    if (padding % 4) { padding += (4 - (padding % 4)) % 4; }
   }
 
   // Open the program
@@ -264,15 +266,15 @@ int sys_execv(char *program, char **args, int *err) {
   }
 
   // Lets start switching over memory space
-  as = curproc->p_addrspace;
+  addr = curproc->p_addrspace;
   curproc->p_addrspace = NULL;
 
   // Make sure memory deletion works
-  as_destroy(as);
+  as_destroy(addr);
   KASSERT(proc_getas() == NULL);
 
-  as = as_create();
-  if (as == NULL) {
+  addr = as_create();
+  if (addr == NULL) {
     kfree(name_copy);
     vfs_close(v);
     *err = ENOMEM;
@@ -280,7 +282,7 @@ int sys_execv(char *program, char **args, int *err) {
   }
 
   // Change and activate addressspace
-  proc_setas(as);
+  proc_setas(addr);
   as_activate();
 
   /* Load the executable. */
@@ -292,20 +294,18 @@ int sys_execv(char *program, char **args, int *err) {
     return -1;
   }
 
-  failure = as_define_stack(as, &stackptr);
+  failure = as_define_stack(addr, &stackptr);
   if (failure) {
     kfree(name_copy);
     *err = failure;
     return -1;
     }
 
-  // Done with file
-  vfs_close(v);
-
   // Increment stack pointer for how much space is needed
   stackptr -= padding;
   char **arg_address = (char **) kmalloc(sizeof(char *) * num_of_args + 1);
 
+  vfs_close(v);
 
   for(int i = 0; i < num_of_args; i++) {
 
