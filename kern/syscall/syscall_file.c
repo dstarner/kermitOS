@@ -482,7 +482,7 @@ int dup2(int oldfd, int newfd, int * err) {
 
   // Using dup2 to clone a file handle onto itself has no effect
   if (oldfd == newfd) {
-    return 0;
+    return newfd;
   }
 
 
