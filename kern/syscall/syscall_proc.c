@@ -75,7 +75,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 
     cv_wait(procs[pid]->e_cv, procs[pid]->e_lock);
     // cv_wait(curproc->e_cv, curproc->e_lock);
-  } 
+  }
 
   // Update status if status exists
   *status = procs[pid]->exit_code;
@@ -181,7 +181,6 @@ int sys_execv(char *program, char **args, int *err) {
     return -1;
   }
 
-
   /* Copy into kernelspace */
   char *name_copy = (char *) kmalloc(sizeof(char) * NAME_MAX);
   size_t actual = 0;
@@ -234,7 +233,6 @@ int sys_execv(char *program, char **args, int *err) {
       *err = EFAULT;
       return -1;
     }
-    copied_args++;
   }
 
   // Padding is how much to change the stack pointer
@@ -357,7 +355,6 @@ int sys_execv(char *program, char **args, int *err) {
 }
 
 void sys_exit(int exit_code, bool fatal_signal) {
-  
   // Get the lock
   lock_acquire(curproc->e_lock);
 
@@ -381,16 +378,15 @@ void sys_exit(int exit_code, bool fatal_signal) {
     // Let all the waiting processes know that we are waiting.
     cv_broadcast(curproc->e_cv, curproc->e_lock);
     lock_release(curproc->e_lock);
-  
-  } else {
 
+  } else {
     // Release the lock
     lock_release(curproc->e_lock);
 
     // DESTROY IT ALL! (I'm tired and just want this shit to work)
     cv_destroy(curproc->e_cv);
     lock_destroy(curproc->e_lock);
-    
+
     // Destroy Address space
     as_destroy(curproc->p_addrspace);
     curproc->p_addrspace = NULL;
