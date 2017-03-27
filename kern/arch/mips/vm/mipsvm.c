@@ -7,10 +7,13 @@
  * memory space
  */
 
+ /*
+  * Wrap ram_stealmem in a spinlock.
+  */
+ static struct spinlock coremap_lock = SPINLOCK_INITIALIZER;
+
 /* Initialization function */
 void vm_bootstrap() {
-
-  // Create coremap
 
 }
 
