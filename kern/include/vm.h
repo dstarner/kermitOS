@@ -29,14 +29,6 @@
 
 #ifndef _VM_H_
 #define _VM_H_
-
-/*
- * VM system-related definitions.
- *
- * You'll probably want to add stuff here.
- */
-
-
 #include <machine/vm.h>
 
 /* Fault-type arguments to vm_fault() */
@@ -44,6 +36,25 @@
 #define VM_FAULT_WRITE       1    /* A write was attempted */
 #define VM_FAULT_READONLY    2    /* A write to a readonly page was attempted*/
 
+// Different states a coremap block can take on
+
+// Structure for coremap entry
+struct coremap_block {
+
+    // Current state of this block
+    bool allocated;
+
+
+};
+
+// Starting address for the coremap
+paddr_t coremap_startaddr;
+
+// Array based coremap
+struct coremap_block *coremap;
+
+/* Initialization function for coremap */
+void coremap_bootstrap(void);
 
 /* Initialization function */
 void vm_bootstrap(void);

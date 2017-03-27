@@ -2,8 +2,15 @@
 #include <machine/vm.h>
 #include <vm.h>
 
+/*
+ * coremap_bootstrap is located in ram.c so that it can easily get
+ * memory space
+ */
+
 /* Initialization function */
 void vm_bootstrap() {
+
+  // Create coremap
 
 }
 

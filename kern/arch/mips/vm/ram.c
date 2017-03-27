@@ -69,8 +69,7 @@ ram_bootstrap(void)
 	 */
 	firstpaddr = firstfree - MIPS_KSEG0;
 
-	kprintf("%uk physical memory available\n",
-		(lastpaddr-firstpaddr)/1024);
+	kprintf("%uk physical memory available\n", (lastpaddr-firstpaddr)/1024);
 }
 
 /*
@@ -107,6 +106,28 @@ ram_stealmem(unsigned long npages)
 	firstpaddr += size;
 
 	return paddr;
+}
+
+/*
+ * This function will bootstrap the coremap and pages, by first determining
+ * the total number of pages needed. This is done by dividing the range of
+ * addresses had (denoted by lastpaddr) by PAGE_SIZE. The real number of pages
+ * will be
+ */
+void coremap_bootstrap() {
+	int total_blocks = lastpaddr / PAGE_SIZE; // How many total blocks/pages we have
+
+	// We need to account for space taken up by the coremap array
+	int valid_pages = sizeof(struct coremap_block) * total_blocks/PAGE_SIZE;
+
+	if ((sizeof(struct coremap_block) * total_blocks) % PAGE_SIZE > 0) {
+		pages++;
+	}
+
+	coremap_startaddr = ram_stealmem(sizeof(struct coremap_block) * pages)
+
+	
+
 }
 
 /*
