@@ -39,7 +39,7 @@
 // Different states a coremap block can take on
 
 // Structure for coremap entry
-struct coremap_block {
+struct coremap_page {
 
     // Current state of this block
     bool allocated;
@@ -51,7 +51,8 @@ struct coremap_block {
 paddr_t coremap_startaddr;
 
 // Array based coremap
-struct coremap_block *coremap;
+struct coremap_page *coremap;
+
 
 /* Initialization function for coremap */
 void coremap_bootstrap(void);

@@ -11,9 +11,45 @@
 #include <vm.h>
 
 /*
- * coremap_bootstrap is located in ram.c so that it can easily get
- * memory space
+ * This function will bootstrap the coremap and pages, by first determining
+ * the total number of pages needed. This is done by dividing the range of
+ * addresses had (denoted by lastpaddr) by PAGE_SIZE. The real number of pages
+ * will be
  */
+void coremap_bootstrap() {
+
+	kprintf("--Bootstraping Coremap--");
+  // Get the first free address to manage
+	paddr_t first_address = ram_getfirstfree();
+	paddr_t last_address = ram_getsize();
+
+	// The range for the coremap
+	paddr_t addr_range = last_address - first_address;
+
+	// (latpaddr - firstfree) = n * size(coremap_block) + PAGE_SIZE * n
+	// where n is the number of pages
+	unsigned int pages = range / (PAGE_SIZE + sizeof(struct coremap_page));
+
+	kprintf("First P_Addr: %d\n Last P_Addr: %d\nPages: %d", first_address, last_address, pages);
+
+	// If not a perfect fit
+	//unsigned int pages_to_steal = pages;
+	//if (pages_to_steal * PAGE_SIZE < addr_range) {
+		// Ask for extra page to fill rest of memory
+		//pages_to_steal++;
+	//}
+
+	// Grab all of the memory
+	//coremap_startaddr = ram_stealmem(pages);
+  //KASSERT(coremap_startaddr != 0)
+
+  // Initialize the coremap at that location
+  //coremap = (void*) PADDR_TO_KVADDR(coremap_startaddr);
+
+
+
+
+}
 
  /*
   * Wrap ram_stealmem in a spinlock.

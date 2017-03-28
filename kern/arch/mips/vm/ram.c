@@ -115,18 +115,30 @@ ram_stealmem(unsigned long npages)
  * will be
  */
 void coremap_bootstrap() {
-	int total_blocks = lastpaddr / PAGE_SIZE; // How many total blocks/pages we have
 
-	// We need to account for space taken up by the coremap array
-	int valid_pages = sizeof(struct coremap_block) * total_blocks/PAGE_SIZE;
+  // Get the first free address to manage
+	paddr_t first_address = ram_getfirstfree();
 
-	if ((sizeof(struct coremap_block) * total_blocks) % PAGE_SIZE > 0) {
-		pages++;
+	// The range for the coremap
+	paddr_t addr_range = ram_getsize() - first_address;
+
+	// (latpaddr - firstfree) = n * size(coremap_block) + PAGE_SIZE * n
+	// where n is the number of pages
+	unsigned int pages = range / (PAGE_SIZE + sizeof(struct coremap_block));
+
+	// If not a perfect fit
+	unsigned int pages_to_steal = pages;
+	if (pages_to_steal * PAGE_SIZE < addr_range) {
+		// Ask for extra page to fill rest of memory
+		pages_to_steal++;
 	}
 
-	coremap_startaddr = ram_stealmem(sizeof(struct coremap_block) * pages)
+	// Where to start the coremap array.
+	coremap_startaddr = ram_stealmem(pages);
 
-	
+
+
+
 
 }
 
