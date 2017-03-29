@@ -44,7 +44,6 @@ struct coremap_page {
     // Current state of this block
     bool allocated;
 
-
 };
 
 // Starting address for the coremap
@@ -53,6 +52,8 @@ paddr_t coremap_startaddr;
 // Array based coremap
 struct coremap_page *coremap;
 
+// If the vm manager has booted
+extern bool vm_booted;
 
 /* Initialization function for coremap */
 void coremap_bootstrap(void);

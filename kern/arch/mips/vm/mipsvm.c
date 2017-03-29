@@ -18,7 +18,6 @@
  */
 void coremap_bootstrap() {
 
-	kprintf("--Bootstraping Coremap--");
   // Get the first free address to manage
 	paddr_t first_address = ram_getfirstfree();
 	paddr_t last_address = ram_getsize();
@@ -26,28 +25,37 @@ void coremap_bootstrap() {
 	// The range for the coremap
 	paddr_t addr_range = last_address - first_address;
 
+	unsigned int total_pages = addr_range / PAGE_SIZE;
+
 	// (latpaddr - firstfree) = n * size(coremap_block) + PAGE_SIZE * n
 	// where n is the number of pages
-	unsigned int pages = range / (PAGE_SIZE + sizeof(struct coremap_page));
+	unsigned int pages = sizeof(struct coremap_page) * total_pages / PAGE_SIZE;
 
-	kprintf("First P_Addr: %d\n Last P_Addr: %d\nPages: %d", first_address, last_address, pages);
-
-	// If not a perfect fit
-	//unsigned int pages_to_steal = pages;
-	//if (pages_to_steal * PAGE_SIZE < addr_range) {
-		// Ask for extra page to fill rest of memory
-		//pages_to_steal++;
-	//}
+	// Make sure it fits in a nice 4K block
+	if ((sizeof(struct coremap_page) * total_pages) % PAGE_SIZE > 0) {
+		pages++;
+	}
 
 	// Grab all of the memory
-	//coremap_startaddr = ram_stealmem(pages);
-  //KASSERT(coremap_startaddr != 0)
+	coremap_startaddr = ram_stealmem(pages);
+  KASSERT(coremap_startaddr != 0)
 
   // Initialize the coremap at that location
-  //coremap = (void*) PADDR_TO_KVADDR(coremap_startaddr);
+  coremap = (void*) PADDR_TO_KVADDR(coremap_startaddr);
 
+	// Allocat for the coremap
+	int allocated_pages = firstpaddr / PAGE_SIZE;
+	for(int i = 0; i < allocated_pages; i++) {
+		coremap[i].allocated = true;
+	}
 
+	// Everything else is free game
+	int free_pages = total_pages - allocated_pages;
+	for(int i = allocated_pages; i < free_pages; i++) {
+		coremap[i].allocated = false;
+	}
 
+	vm_booted = false;
 
 }
 
@@ -59,6 +67,11 @@ void coremap_bootstrap() {
 /* Initialization function */
 void vm_bootstrap() {
 
+	// Initialize above here
+	vm_booted = true;
+
+	// Make sure we really booted
+	KASSERT(vm_booted);
 }
 
 /* Fault handling function called by trap code */
