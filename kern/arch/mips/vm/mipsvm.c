@@ -44,7 +44,7 @@ void coremap_bootstrap() {
   coremap = (void*) PADDR_TO_KVADDR(coremap_startaddr);
 
 	// Allocat for the coremap
-	int allocated_pages = firstpaddr / PAGE_SIZE;
+	int allocated_pages = first_address / PAGE_SIZE;
 	for(int i = 0; i < allocated_pages; i++) {
 		coremap[i].allocated = true;
 	}
@@ -83,18 +83,19 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 }
 
 static paddr_t getppages(unsigned long npages) {
-
+	(void) npages;
+	return 0;
 }
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages) {
-	paddr_t addr = 0;
-	// Get the address for npages
-	addr = getppages(npages);
+
+	// Get address for n pages
+	paddr_t addr = getppages(npages);
 
 	// Make sure its valid
-	if (pa != 0) {
-		return PADDR_TO_KVADDR(pa);
+	if (addr != 0) {
+		return PADDR_TO_KVADDR(addr);
 	}
   return 0;
 }
