@@ -82,9 +82,20 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   return 0;
 }
 
+static paddr_t getppages(unsigned long npages) {
+
+}
+
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages) {
-  (void) npages;
+	paddr_t addr = 0;
+	// Get the address for npages
+	addr = getppages(npages);
+
+	// Make sure its valid
+	if (pa != 0) {
+		return PADDR_TO_KVADDR(pa);
+	}
   return 0;
 }
 
