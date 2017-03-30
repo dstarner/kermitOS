@@ -10,6 +10,23 @@
 #include <addrspace.h>
 #include <vm.h>
 
+/* Helper for calculating number of pages. This does all the math computation */
+paddr_t calculate_range(unsigned int pages) {
+	// |-----------------l---l---------------------------------------------|
+	// | / / Coremap / / l---l ---l---l---l---l Pages l---l---l---l---l--- |
+	// |-----------------l---l---------------------------------------------|
+	//
+	// range = (n * SOCP + (PAGE_SIZE - (n * SOCP % PAGE_SIZE))) + (PAGE_SIZE * n)
+	// where
+	// n = number of pages
+	// SOCP = size of a single coremap_page struct (used for array length)
+	// PAGE_SIZE = 4K size of a single page
+	// range = size range of memory
+
+	paddr_t padding = PAGE_SIZE - ((pages * sizeof(coremap_page)) % PAGE_SIZE)
+	return (pages * sizeof(struct coremap_page) + padding) + (PAGE_SIZE * pages)
+}
+
 /*
  * This function will bootstrap the coremap and pages, by first determining
  * the total number of pages needed. This is done by dividing the range of
@@ -25,34 +42,41 @@ void coremap_bootstrap() {
 	// The range for the coremap
 	paddr_t addr_range = last_address - first_address;
 
-	unsigned int total_pages = addr_range / PAGE_SIZE;
+	//         pages          coremap
+	//  mem     coremap     -------------- pad coremap to 4K --    physical pages
+	// range = (n * SOCP + (PAGE_SIZE - (n * SOCP % PAGE_SIZE))) + (PAGE_SIZE * n)
+	unsigned int pages = 1;
 
-	// (latpaddr - firstfree) = n * size(coremap_block) + PAGE_SIZE * n
-	// where n is the number of pages
-	unsigned int pages = sizeof(struct coremap_page) * total_pages / PAGE_SIZE;
-
-	// Make sure it fits in a nice 4K block
-	if ((sizeof(struct coremap_page) * total_pages) % PAGE_SIZE > 0) {
+	// Keep trying to find the upper bound on pages
+	while (addr_range > calculate_range(pages)) {
 		pages++;
 	}
 
-	// Grab all of the memory
-	coremap_startaddr = ram_stealmem(pages);
-  KASSERT(coremap_startaddr != 0)
+	// We hit over with the 'while' loop, so we reduce
+	// by one to bring back into acceptable memory range
+	pages--;
+	KASSERT(pages != 0)
 
-  // Initialize the coremap at that location
-  coremap = (void*) PADDR_TO_KVADDR(coremap_startaddr);
+	kprintf("Number of Pages Allocated: %d\n", pages);
 
-	// Allocat for the coremap
-	int allocated_pages = first_address / PAGE_SIZE;
-	for(int i = 0; i < allocated_pages; i++) {
-		coremap[i].allocated = true;
-	}
+	// How many pages we have (for iteration and shit).
+	COREMAP_PAGES = pages;
 
-	// Everything else is free game
-	int free_pages = total_pages - allocated_pages;
-	for(int i = allocated_pages; i < free_pages; i++) {
-		coremap[i].allocated = false;
+	// Set the coremap to start at the starting address
+	coremap_startaddr = first_address;
+	coremap = (void*) PADDR_TO_KVADDR(coremap_startaddr);
+
+	// We will initialize the current page
+	// to be the first page
+	current_page = 0;
+
+	// The starting address for the physical pages
+	paddr_t padding = PAGE_SIZE - ((pages * sizeof(coremap_page)) % PAGE_SIZE)
+	coremap_pagestartaddr = first_address + (pages * sizeof(coremap_page) + padding);
+
+	// Initialize the coremap with everything being unitialized
+	for (int i=0; i<COREMAP_PAGES; i++) {
+		coremap[i]->allocated = false;
 	}
 
 	vm_booted = false;
@@ -83,7 +107,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 }
 
 static paddr_t getppages(unsigned long npages) {
-	(void) npages;
+	// Cycle through the pages, try to get space raw
+
+	// Could not get enough mem, time to swap!
 	return 0;
 }
 

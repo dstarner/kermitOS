@@ -108,39 +108,6 @@ ram_stealmem(unsigned long npages)
 	return paddr;
 }
 
-/*
- * This function will bootstrap the coremap and pages, by first determining
- * the total number of pages needed. This is done by dividing the range of
- * addresses had (denoted by lastpaddr) by PAGE_SIZE. The real number of pages
- * will be
- */
-void coremap_bootstrap() {
-
-  // Get the first free address to manage
-	paddr_t first_address = ram_getfirstfree();
-
-	// The range for the coremap
-	paddr_t addr_range = ram_getsize() - first_address;
-
-	// (latpaddr - firstfree) = n * size(coremap_block) + PAGE_SIZE * n
-	// where n is the number of pages
-	unsigned int pages = range / (PAGE_SIZE + sizeof(struct coremap_block));
-
-	// If not a perfect fit
-	unsigned int pages_to_steal = pages;
-	if (pages_to_steal * PAGE_SIZE < addr_range) {
-		// Ask for extra page to fill rest of memory
-		pages_to_steal++;
-	}
-
-	// Where to start the coremap array.
-	coremap_startaddr = ram_stealmem(pages);
-
-
-
-
-
-}
 
 /*
  * This function is intended to be called by the VM system when it
