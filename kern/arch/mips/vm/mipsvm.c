@@ -23,7 +23,7 @@ paddr_t calculate_range(unsigned int pages) {
 	// PAGE_SIZE = 4K size of a single page
 	// range = size range of memory
 
-	paddr_t padding = PAGE_SIZE - ((pages * sizeof(coremap_page)) % PAGE_SIZE)
+	paddr_t padding = PAGE_SIZE - ((pages * sizeof(struct coremap_page)) % PAGE_SIZE)
 	return (pages * sizeof(struct coremap_page) + padding) + (PAGE_SIZE * pages)
 }
 
@@ -71,8 +71,8 @@ void coremap_bootstrap() {
 	current_page = 0;
 
 	// The starting address for the physical pages
-	paddr_t padding = PAGE_SIZE - ((pages * sizeof(coremap_page)) % PAGE_SIZE)
-	coremap_pagestartaddr = first_address + (pages * sizeof(coremap_page) + padding);
+	paddr_t padding = PAGE_SIZE - ((pages * sizeof(struct coremap_page)) % PAGE_SIZE)
+	coremap_pagestartaddr = first_address + (pages * sizeof(struct coremap_page) + padding);
 
 	// Initialize the coremap with everything being unitialized
 	for (int i=0; i<COREMAP_PAGES; i++) {
@@ -106,9 +106,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   return 0;
 }
 
-static paddr_t getppages(unsigned long npages) {
+paddr_t getppages(unsigned long npages) {
 	// Cycle through the pages, try to get space raw
-
+	(void) npages;
 	// Could not get enough mem, time to swap!
 	return 0;
 }

@@ -73,7 +73,7 @@ void vm_bootstrap(void);
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
 /* Helper function to get 'n' number of pages */
-static paddr_t getppages(unsigned long npages);
+paddr_t getppages(unsigned long);
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);
