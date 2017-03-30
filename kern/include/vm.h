@@ -47,20 +47,20 @@ struct coremap_page {
 };
 
 // Starting address for the coremap
-extern paddr_t coremap_startaddr;
+paddr_t coremap_startaddr;
 
 // Starting address for the coremap physically pages
-extern paddr_t coremap_pagestartaddr;
+paddr_t coremap_pagestartaddr;
 
 // The number of pages in the coremap
-extern unsigned int COREMAP_PAGES;
-extern unsigned int current_page;
+unsigned int COREMAP_PAGES;
+unsigned int current_page;
 
 // Array based coremap
-extern struct coremap_page *coremap;
+struct coremap_page *coremap;
 
 // If the vm manager has booted
-extern bool vm_booted;
+bool vm_booted;
 
 /* Initialization function for coremap */
 void coremap_bootstrap(void);
