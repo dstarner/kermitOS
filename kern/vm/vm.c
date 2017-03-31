@@ -40,7 +40,8 @@ paddr_t calculate_range(unsigned int pages) {
  */
 void coremap_bootstrap() {
 
-  // Get the first free address to manage
+	// Physical memory address
+  // Get the first and last free address to manage
 	paddr_t first_address = ram_getfirstfree();
 	paddr_t last_address = ram_getsize();
 
@@ -110,6 +111,13 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 paddr_t getppages(unsigned long npages) {
 	// Cycle through the pages, try to get space raw
 	// Could not get enough mem, time to swap!
+	for (int i=0; i<COREMAP_PAGES; i++) {
+
+		// Find an unallocated page
+		if (!coremap[i].allocated) {
+			// Iterate 'j' to see if there are n contiguous pages
+		}
+	}
 
 	return 0;
 }
