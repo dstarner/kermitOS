@@ -109,7 +109,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
 paddr_t getppages(unsigned long npages) {
 	// Cycle through the pages, try to get space raw
-	(void) npages;
 	// Could not get enough mem, time to swap!
 	return 0;
 }
