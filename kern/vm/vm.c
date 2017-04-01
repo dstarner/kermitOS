@@ -32,7 +32,9 @@ paddr_t calculate_range(unsigned int pages) {
         unsigned long page_array_size = PAGE_SIZE * pages; 
 	unsigned long coremap_size = pages * sizeof(struct coremap_page);
 	unsigned long coremap_padded = coremap_size + padding;
-	paddr_t size = coremap_padded + page_array_size;
+        (void) coremap_padded;
+        (void) page_array_size;
+	paddr_t size = page_array_size + coremap_padded;
         return size;
 }
 
@@ -46,8 +48,8 @@ void coremap_bootstrap() {
 
 	// Physical memory address
   // Get the first and last free address to manage
-	paddr_t first_address = ram_getfirstfree();
 	paddr_t last_address = ram_getsize();
+	paddr_t first_address = ram_getfirstfree();
 
 	// The range for the coremap
 	paddr_t addr_range = last_address - first_address;
