@@ -114,7 +114,7 @@ paddr_t getppages(unsigned long npages) {
 
 	unsigned long count = 0;
 
-	for (int i=0; i<COREMAP_PAGES; i++) {
+	for (unsigned int i=0; i<COREMAP_PAGES; i++) {
 
 		// Find an unallocated page
 		if (!coremap[i].allocated) {
@@ -123,8 +123,17 @@ paddr_t getppages(unsigned long npages) {
 			count = 0;
 		}
 
+		// If we have what we need
 		if (count == npages) {
-			page_num = i - count;
+			// Get the starting address
+			int page_num = i - (count - 1);
+
+			// Mark those pages as allocated
+			for (int j=page_num; j < count; j++) {
+				coremap[page_num].allocated = true;
+			}
+
+			// Return the correct address
 			return (page_num * PAGE_SIZE) + coremap_pagestartaddr;
 		}
 
