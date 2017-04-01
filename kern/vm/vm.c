@@ -27,9 +27,13 @@ paddr_t calculate_range(unsigned int pages) {
 	// SOCP = size of a single coremap_page struct (used for array length)
 	// PAGE_SIZE = 4K size of a single page
 	// range = size range of memory
-
-	paddr_t padding = PAGE_SIZE - ((pages * sizeof(struct coremap_page)) % PAGE_SIZE);
-	return (pages * sizeof(struct coremap_page) + padding) + (PAGE_SIZE * pages);
+        unsigned int pg = pages;
+	paddr_t padding = PAGE_SIZE - ((pg * sizeof(struct coremap_page)) % PAGE_SIZE);
+        unsigned long page_array_size = PAGE_SIZE * pages; 
+	unsigned long coremap_size = pages * sizeof(struct coremap_page);
+	unsigned long coremap_padded = coremap_size + padding;
+	paddr_t size = coremap_padded + page_array_size;
+        return size;
 }
 
 /*
@@ -129,7 +133,7 @@ paddr_t getppages(unsigned long npages) {
 			int page_num = i - (count - 1);
 
 			// Mark those pages as allocated
-			for (int j=page_num; j < count; j++) {
+			for (unsigned int j=page_num; j < count; j++) {
 				coremap[page_num].allocated = true;
 			}
 
