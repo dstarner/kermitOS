@@ -72,7 +72,7 @@ void vm_bootstrap(void);
 /* Fault handling function called by trap code */
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
-/* Helper function to get 'n' number of pages */
+/* Helper function to get 'n' number of physical pages */
 paddr_t getppages(unsigned long);
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */

@@ -111,12 +111,23 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 paddr_t getppages(unsigned long npages) {
 	// Cycle through the pages, try to get space raw
 	// Could not get enough mem, time to swap!
+
+	unsigned long count = 0;
+
 	for (int i=0; i<COREMAP_PAGES; i++) {
 
 		// Find an unallocated page
 		if (!coremap[i].allocated) {
-			// Iterate 'j' to see if there are n contiguous pages
+			count++;
+		} else {
+			count = 0;
 		}
+
+		if (count == npages) {
+			page_num = i - count;
+			return (page_num * PAGE_SIZE) + coremap_pagestartaddr;
+		}
+
 	}
 
 	return 0;
@@ -125,7 +136,7 @@ paddr_t getppages(unsigned long npages) {
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages) {
 
-	// Get address for n pages
+	// Get address for n physical pages
 	paddr_t addr = getppages(npages);
 
 	// Make sure its valid
