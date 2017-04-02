@@ -29,7 +29,7 @@ paddr_t calculate_range(unsigned int pages) {
 	// range = size range of memory
         unsigned int pg = pages;
 	paddr_t padding = PAGE_SIZE - ((pg * sizeof(struct coremap_page)) % PAGE_SIZE);
-        unsigned long page_array_size = PAGE_SIZE * pages; 
+        unsigned long page_array_size = PAGE_SIZE * pages;
 	unsigned long coremap_size = pages * sizeof(struct coremap_page);
 	unsigned long coremap_padded = coremap_size + padding;
         (void) coremap_padded;
@@ -135,8 +135,8 @@ paddr_t getppages(unsigned long npages) {
 			int page_num = i - (count - 1);
 
 			// Mark those pages as allocated
-			for (unsigned int j=page_num; j < count; j++) {
-				coremap[page_num].allocated = true;
+			for (unsigned int j=0; j < count; j++) {
+				coremap[page_num + j].allocated = true;
 			}
 
 			// Return the correct address
