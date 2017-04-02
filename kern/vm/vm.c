@@ -148,7 +148,7 @@ paddr_t getppages(unsigned long npages) {
 			}
 
       // Set the block_size for the first page
-      coremap[page_num] = npages;
+      coremap[page_num].block_size = npages;
 
       // If booted, then be atomic
       if (vm_booted) {
@@ -196,12 +196,15 @@ void free_kpages(vaddr_t addr) {
   }
 
   // Make sure that the page is actually allocated
-  KASSERT(coremap[i].allocated);
-
-  coremap[i].allocated = false;
-
-  // Clear out the page
-  zero_out_page(page_num);
+  KASSERT(coremap[page_num].allocated);
+  
+  for (unsigned int offset = 0; offset < coremap[page_num].block_size; offset++) { 
+    coremap[page_num + offset].allocated = false;
+    coremap[page_num + offset].block_size = 0;
+    
+    // Clear out the page
+    zero_out_page(page_num);
+  }
 
   // If booted, then be atomic
   if (vm_booted) {
