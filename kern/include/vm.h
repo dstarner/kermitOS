@@ -45,7 +45,7 @@ struct coremap_page {
     bool allocated;
 
     // Series of blocks following this page:
-    long block_size;
+    unsigned long block_size;
 };
 
 // Starting address for the coremap
