@@ -13,7 +13,7 @@
 /*
  * Wrap ram_stealmem in a spinlock.
  */
-// static struct spinlock coremap_lock = SPINLOCK_INITIALIZER;
+static struct spinlock coremap_lock = SPINLOCK_INITIALIZER;
 
 /* Helper for calculating number of pages. This does all the math computation */
 paddr_t calculate_range(unsigned int pages) {
@@ -33,7 +33,8 @@ paddr_t calculate_range(unsigned int pages) {
   unsigned long page_array_size = PAGE_SIZE * pages;
 	unsigned long coremap_size = pages * sizeof(struct coremap_page);
 	unsigned long coremap_padded = coremap_size + padding;
-	paddr_t size = coremap_padded + page_array_size;
+	paddr_t size = page_array_size + coremap_padded;
+
   return size;
 }
 
@@ -44,11 +45,10 @@ paddr_t calculate_range(unsigned int pages) {
  * will be
  */
 void coremap_bootstrap() {
-
 	// Physical memory address
   // Get the first and last free address to manage
-	paddr_t first_address = ram_getfirstfree();
 	paddr_t last_address = ram_getsize();
+	paddr_t first_address = ram_getfirstfree();
 
 	// The range for the coremap
 	paddr_t addr_range = last_address - first_address;
@@ -88,6 +88,7 @@ void coremap_bootstrap() {
 	// Initialize the coremap with everything being unitialized
 	for (unsigned int i=0; i<COREMAP_PAGES; i++) {
 		coremap[i].allocated = false;
+    // coremap[i].block_size = 0;
 	}
 
 	vm_booted = false;
@@ -187,39 +188,74 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // // ---------------------------
 }
 
+void zero_out_page(unsigned long page_num) {
+  (void) page_num;
+}
+
 paddr_t getppages(unsigned long npages) {
 	// Cycle through the pages, try to get space raw
 	// Could not get enough mem, time to swap!
 
 	unsigned long count = 0;
 
-	for (unsigned int i=0; i<COREMAP_PAGES; i++) {
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_acquire(&coremap_lock);
+  }
 
-		// Find an unallocated page
+	for (unsigned long i=0; i<COREMAP_PAGES; i++) {
+		// Find a series of unallocated page that matches npages.
 		if (!coremap[i].allocated) {
-			count++;
+			count++;  // Increment the count
 		} else {
-			count = 0;
+			count = 0;  // Reset the count
 		}
 
 		// If we have what we need
 		if (count == npages) {
 			// Get the starting address
-			int page_num = i - (count - 1);
+			unsigned long page_num = i - (count - 1);
+
+      // Calculate the physical address for the first page allocated.
+      paddr_t paddr = (page_num * PAGE_SIZE) + coremap_pagestartaddr;
+      KASSERT(paddr != 0);
+
+      uint32_t vaddr_vpn = PADDR_TO_KVADDR(paddr) >> 20; // Get virtual page from virtual address by getting top 20 bits.
 
 			// Mark those pages as allocated
-			for (unsigned int j=page_num; j < count; j++) {
-				coremap[page_num].allocated = true;
+			for (unsigned long j = 0; j < count; j++) {
+				coremap[page_num + j].allocated = true;
+
+        // Initialize value for block_size for all pages.
+        coremap[page_num].block_size = -1;
+
+        // Set the associated VPN to all of the pages.
+        // Since they are all right next to each other, their physical addresses should be 1 page size apart.
+        coremap[page_num].virtual_page_num = vaddr_vpn + (j * PAGE_SIZE);
 			}
 
-			// Return the correct address
-			return (page_num * PAGE_SIZE) + coremap_pagestartaddr;
-		}
+      // Remember to set the block_size for the first page
+      coremap[page_num].block_size = npages;
 
+      // If booted, then be atomic
+      if (vm_booted) {
+        spinlock_release(&coremap_lock);
+      }
+
+			// Return the correct address
+			return paddr;
+		}
 	}
 
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_release(&coremap_lock);
+  }
+
+  // If not enough pages are found, return 0
 	return 0;
 }
+
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages) {
@@ -229,13 +265,14 @@ vaddr_t alloc_kpages(unsigned npages) {
 
 	// Make sure its valid
 	if (addr != 0) {
-		return PADDR_TO_KVADDR(addr);
+    vaddr_t vaddr = PADDR_TO_KVADDR(addr);
+		return vaddr;
 	}
 
   return 0;
 }
 
-void free_kpages(vaddr_t vaddr) {
+paddr_t get_paddr_from_vaddr(vaddr_t vaddr) {
   uint32_t vaddr_vpn = vaddr >> 20; // Get virtual page from virtual address by getting top 20 bits.
   uint32_t vaddr_offset = vaddr & 0xFFF; // Get offset of the virtual address; 0xFFF is 12 bits (1111 1111 1111)
 
@@ -246,9 +283,31 @@ void free_kpages(vaddr_t vaddr) {
   // Find a matching TLB entry.
   int tlb_index = tlb_probe(ehi, elo);
 
-  // tlb_probe returns -1 if it cannot find an index.
+  // tlb_probe returns -1 if it cannot find an index and the page table need to
+  // be
   if (tlb_index < 0) {
-    // TODO: Throw a invalid page error but idk how to do that yet.
+    // We need to find the physical address if the TLB cannot find a match.
+
+    for (unsigned long i = 0; i < COREMAP_PAGES; ++i) {
+      // If we found the page with the same virtual page number, then that means
+      // The index is the correct physical page on the coremap, and we need to
+      // convert the virtual address to the physical one.
+      if (coremap[i].virtual_page_num == vaddr_vpn) {
+        // Find the starting point of the physical page address.
+        uint32_t ppage_num = coremap_pagestartaddr + (i * PAGE_SIZE);
+
+        // Build the physical address by concatenting the two chunks together.
+        paddr_t paddr = (ppage_num << 20) + vaddr_offset;
+
+        // TODO: Write to TLB for caching.
+        return paddr;
+      }
+    }
+
+    // If the program has not returned yet, then the virtual address provided does not
+    // have an associated page.
+    kprintf("Kernel cannot find physical address");
+    return 0;
   }
 
   // At this point we can assume we found a match, and we need to read the TLB for the address.
@@ -256,15 +315,55 @@ void free_kpages(vaddr_t vaddr) {
   tlb_read(&ehi, &elo, tlb_index); // elo will now contain the physical addr
 
   // Build the physical address by concatenting the two chunks together.
-  paddr_t paddr = elo << 20 | vaddr_offset;
+  paddr_t paddr = (elo << 20) + vaddr_offset;
+  return paddr;
+}
 
+void free_kpages(vaddr_t vaddr) {
+  paddr_t paddr = get_paddr_from_vaddr(vaddr);
+
+  // If this returns 0 then that means it is not a valid virtual address.
+  // Virtual addresses shouldn't be valid at 0 anyways.
+  if (paddr == 0) {
+    // TODO: Error catching?
+    return;
+  }
+
+  // At this point we found a physical address, and we can proceed to free the pages.
   // Identify the physical page on the coremap array
   unsigned ppage_coremap_index = (paddr - coremap_pagestartaddr) % PAGE_SIZE;
 
   // Determine that the page is no longer allocated.
   coremap[ppage_coremap_index].allocated = false;
 
-  //TODO: Destroy the physical page's content.
+  // TODO: Destroy the physical page's content.
+// void free_kpages(vaddr_t addr) {
+//   paddr_t raw_paddr = KVADDR_TO_PADDR(addr);
+//
+//   // 1) addr = (page_num * PAGE_SIZE) + coremap_pagestartaddr
+//   // 2) addr - coremap_pagestartaddr = page_num * PAGE_SIZE
+//   unsigned long page_num = (raw_paddr - coremap_pagestartaddr) / PAGE_SIZE;
+//
+//   // If booted, then be atomic
+//   if (vm_booted) {
+//     spinlock_acquire(&coremap_lock);
+//   }
+//
+//   // Make sure that the page is actually allocated
+//   KASSERT(coremap[page_num].allocated);
+//
+//   for (unsigned int offset = 0; offset < coremap[page_num].block_size; offset++) {
+//     coremap[page_num + offset].allocated = false;
+//     coremap[page_num + offset].block_size = 0;
+//
+//     // Clear out the page
+//     zero_out_page(page_num);
+//   }
+//
+//   // If booted, then be atomic
+//   if (vm_booted) {
+//     spinlock_release(&coremap_lock);
+//   }
 }
 
 /*
@@ -273,7 +372,12 @@ void free_kpages(vaddr_t vaddr) {
  * to the caller. But it should have been correct at some point in time.
  */
 unsigned int coremap_used_bytes() {
-  return 0;
+  unsigned count = 0;
+  for (unsigned i = 0; i < COREMAP_PAGES; ++i) {
+    if (coremap[i].allocated) ++count;
+  }
+
+  return count * PAGE_SIZE;
 }
 
 /* TLB shootdown handling called from interprocessor_interrupt */

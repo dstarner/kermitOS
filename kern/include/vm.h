@@ -44,6 +44,11 @@ struct coremap_page {
     // Current state of this block
     bool allocated;
 
+    // Series of blocks following this page:
+    long block_size;
+
+    // Stores the virtual page number associated with this page.
+    uint32_t virtual_page_num;
 };
 
 // Starting address for the coremap
@@ -75,9 +80,15 @@ int vm_fault(int faulttype, vaddr_t faultaddress);
 /* Helper function to get 'n' number of physical pages */
 paddr_t getppages(unsigned long);
 
+// Helper function to get physical address from virtual address.
+paddr_t get_paddr_from_vaddr(vaddr_t vaddr);
+
+// Helper function to remove data from a page.
+void zero_out_page(unsigned long pagesum);
+
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);
-void free_kpages(vaddr_t addr);
+void free_kpages(vaddr_t vaddr);
 
 /*
  * Return amount of memory (in bytes) used by allocated coremap pages.  If
