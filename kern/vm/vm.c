@@ -29,11 +29,11 @@ paddr_t calculate_range(unsigned int pages) {
 	// range = size range of memory
 
   unsigned int pg = pages;
-	paddr_t padding = PAGE_SIZE - ((pg * sizeof(struct coremap_page)) % PAGE_SIZE);
+  paddr_t padding = PAGE_SIZE - ((pg * sizeof(struct coremap_page)) % PAGE_SIZE);
   unsigned long page_array_size = PAGE_SIZE * pages;
-	unsigned long coremap_size = pages * sizeof(struct coremap_page);
-	unsigned long coremap_padded = coremap_size + padding;
-	paddr_t size = page_array_size + coremap_padded;
+  unsigned long coremap_size = pages * sizeof(struct coremap_page);
+  unsigned long coremap_padded = coremap_size + padding;
+  paddr_t size = page_array_size + coremap_padded;
 
   return size;
 }
@@ -87,8 +87,8 @@ void coremap_bootstrap() {
 
 	// Initialize the coremap with everything being unitialized
 	for (unsigned int i=0; i<COREMAP_PAGES; i++) {
-		coremap[i].allocated = false;
-    coremap[i].block_size = 0;
+	  coremap[i].state = FREE;
+          coremap[i].block_size = 0;
 	}
 
 	vm_booted = false;
@@ -192,7 +192,7 @@ void zero_out_page(unsigned long page_num) {
   (void) page_num;
 }
 
-paddr_t getppages(unsigned long npages) {
+paddr_t getppages(unsigned long npages, bool isKernel) {
 	// Cycle through the pages, try to get space raw
 	// Could not get enough mem, time to swap!
 
@@ -206,7 +206,7 @@ paddr_t getppages(unsigned long npages) {
   for (unsigned long i=0; i<COREMAP_PAGES; i++) {
     
     // Find a series of unallocated page that matches npages.
-    if (!coremap[i].allocated) {
+    if (coremap[i].state == FREE) {
       count++;  // Increment the count
     } else {
       count = 0;  // Reset the count
@@ -214,8 +214,8 @@ paddr_t getppages(unsigned long npages) {
 
     // If we have what we need
     if (count == npages) {
-	// Get the starting address
-			unsigned long page_num = i - (count - 1);
+      // Get the starting address
+      unsigned long page_num = i - (count - 1);
 
       // Calculate the physical address for the first page allocated.
       paddr_t paddr = (page_num * PAGE_SIZE) + coremap_pagestartaddr;
@@ -223,7 +223,8 @@ paddr_t getppages(unsigned long npages) {
 
       // Mark those pages as allocated
       for (unsigned long j = 0; j < count; j++) {
-        coremap[page_num + j].allocated = true;
+        // Set if the page is user or kernel
+        coremap[page_num + j].state = isKernel ? KERNEL : USER;
 
         // Initialize value for block_size for all pages.
         coremap[page_num + j].block_size = 0;
@@ -237,6 +238,7 @@ paddr_t getppages(unsigned long npages) {
         spinlock_release(&coremap_lock);
       }
 
+
       // Return the correct address
       return paddr;
     }
@@ -245,6 +247,22 @@ paddr_t getppages(unsigned long npages) {
   // If booted, then be atomic
   if (vm_booted) {
     spinlock_release(&coremap_lock);
+  }
+
+  kprintf("Trying to find %lu pages....\n", npages);
+      
+  for(unsigned int pg=0; pg<COREMAP_PAGES; pg++) {
+    switch(coremap[pg].state) {
+      case FREE:
+        kprintf("-");
+        break;
+      case KERNEL:
+        kprintf("K");
+        break;
+      case USER:
+        kprintf("U");
+        break;
+    }
   }
 
   // If not enough pages are found, return 0
@@ -256,7 +274,7 @@ paddr_t getppages(unsigned long npages) {
 vaddr_t alloc_kpages(unsigned npages) {
 
   // Get address for n physical pages
-  paddr_t addr = getppages(npages);
+  paddr_t addr = getppages(npages, true);
 
   // Make sure its valid
   if (addr != 0) {
@@ -343,10 +361,10 @@ void free_kpages(vaddr_t addr) {
   }
 
   // Make sure that the page is actually allocated
-  KASSERT(coremap[page_num].allocated);
+  KASSERT(coremap[page_num].state != FREE);
 
   for (unsigned int offset = 0; offset < coremap[page_num].block_size; offset++) {
-    coremap[page_num + offset].allocated = false;
+    coremap[page_num + offset].state = FREE;
     coremap[page_num + offset].block_size = 0;
 
     // Clear out the page
@@ -368,7 +386,7 @@ void free_kpages(vaddr_t addr) {
 unsigned int coremap_used_bytes() {
   unsigned count = 0;
   for (unsigned i = 0; i < COREMAP_PAGES; ++i) {
-    if (coremap[i].allocated) ++count;
+    if (coremap[i].state != FREE) ++count;
   }
 
   return count * PAGE_SIZE;

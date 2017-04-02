@@ -42,7 +42,7 @@
 struct coremap_page {
 
     // Current state of this block
-    bool allocated;
+    enum stateEnum {FREE, KERNEL, USER} state;
 
     // Series of blocks following this page:
     unsigned long block_size;
@@ -75,7 +75,7 @@ void vm_bootstrap(void);
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
 /* Helper function to get 'n' number of physical pages */
-paddr_t getppages(unsigned long);
+paddr_t getppages(unsigned long, bool);
 
 // Helper function to get physical address from virtual address.
 // paddr_t get_paddr_from_vaddr(vaddr_t vaddr);
