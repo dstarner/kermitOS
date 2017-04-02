@@ -46,9 +46,6 @@ struct coremap_page {
 
     // Series of blocks following this page:
     long block_size;
-
-    // Stores the virtual page number associated with this page.
-    uint32_t virtual_page_num;
 };
 
 // Starting address for the coremap
@@ -81,7 +78,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress);
 paddr_t getppages(unsigned long);
 
 // Helper function to get physical address from virtual address.
-paddr_t get_paddr_from_vaddr(vaddr_t vaddr);
+// paddr_t get_paddr_from_vaddr(vaddr_t vaddr);
 
 // Helper function to remove data from a page.
 void zero_out_page(unsigned long pagesum);
