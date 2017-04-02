@@ -13,7 +13,7 @@
 /*
  * Wrap ram_stealmem in a spinlock.
  */
-// static struct spinlock coremap_lock = SPINLOCK_INITIALIZER;
+static struct spinlock coremap_lock = SPINLOCK_INITIALIZER;
 
 /* Helper for calculating number of pages. This does all the math computation */
 paddr_t calculate_range(unsigned int pages) {
@@ -27,15 +27,13 @@ paddr_t calculate_range(unsigned int pages) {
 	// SOCP = size of a single coremap_page struct (used for array length)
 	// PAGE_SIZE = 4K size of a single page
 	// range = size range of memory
-        unsigned int pg = pages;
+  unsigned int pg = pages;
 	paddr_t padding = PAGE_SIZE - ((pg * sizeof(struct coremap_page)) % PAGE_SIZE);
-        unsigned long page_array_size = PAGE_SIZE * pages;
+  unsigned long page_array_size = PAGE_SIZE * pages;
 	unsigned long coremap_size = pages * sizeof(struct coremap_page);
 	unsigned long coremap_padded = coremap_size + padding;
-        (void) coremap_padded;
-        (void) page_array_size;
 	paddr_t size = page_array_size + coremap_padded;
-        return size;
+  return size;
 }
 
 /*
@@ -89,6 +87,7 @@ void coremap_bootstrap() {
 	// Initialize the coremap with everything being unitialized
 	for (unsigned int i=0; i<COREMAP_PAGES; i++) {
 		coremap[i].allocated = false;
+    coremap[i].block_size = 0;
 	}
 
 	vm_booted = false;
@@ -114,39 +113,62 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   return 0;
 }
 
+void zero_out_page(unsigned long page_num) {
+  (void) page_num;
+}
+
 paddr_t getppages(unsigned long npages) {
 	// Cycle through the pages, try to get space raw
 	// Could not get enough mem, time to swap!
 
 	unsigned long count = 0;
 
-	for (unsigned int i=0; i<COREMAP_PAGES; i++) {
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_acquire(&coremap_lock);
+  }
+
+	for (unsigned long i=0; i<COREMAP_PAGES; i++) {
 
 		// Find an unallocated page
 		if (!coremap[i].allocated) {
-			count++;
+			count++;  // Increment the count
 		} else {
-			count = 0;
+			count = 0;  // Reset the count
 		}
 
 		// If we have what we need
 		if (count == npages) {
 			// Get the starting address
-			int page_num = i - (count - 1);
+			unsigned long page_num = i - (count - 1);
 
 			// Mark those pages as allocated
-			for (unsigned int j=0; j < count; j++) {
+			for (unsigned long j=0; j < count; j++) {
 				coremap[page_num + j].allocated = true;
 			}
+
+      // Set the block_size for the first page
+      coremap[page_num] = npages;
+
+      // If booted, then be atomic
+      if (vm_booted) {
+        spinlock_release(&coremap_lock);
+      }
 
 			// Return the correct address
 			return (page_num * PAGE_SIZE) + coremap_pagestartaddr;
 		}
-
 	}
 
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_release(&coremap_lock);
+  }
+
+  // If nothing is found, return 0
 	return 0;
 }
+
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages) {
@@ -162,7 +184,30 @@ vaddr_t alloc_kpages(unsigned npages) {
 }
 
 void free_kpages(vaddr_t addr) {
-  (void) addr;
+  paddr_t raw_paddr = KVADDR_TO_PADDR(addr);
+
+  // 1) addr = (page_num * PAGE_SIZE) + coremap_pagestartaddr
+  // 2) addr - coremap_pagestartaddr = page_num * PAGE_SIZE
+  unsigned long page_num = (raw_paddr - coremap_pagestartaddr) / PAGE_SIZE;
+
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_acquire(&coremap_lock);
+  }
+
+  // Make sure that the page is actually allocated
+  KASSERT(coremap[i].allocated);
+
+  coremap[i].allocated = false;
+
+  // Clear out the page
+  zero_out_page(page_num);
+
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_release(&coremap_lock);
+  }
+
 }
 
 /*

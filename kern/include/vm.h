@@ -44,6 +44,14 @@ struct coremap_page {
     // Current state of this block
     bool allocated;
 
+    // If this is the first page of a block,
+    // then how many pages are attached.
+    // ex: If we kalloc 3 pages starting at page 150, then
+    // page 150 will have a block size of 3, so that when we
+    // call kfree on page 150, then it will zero out and
+    // un-allocate those 3 pages
+    unsigned int block_size;
+
 };
 
 // Starting address for the coremap
@@ -74,6 +82,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress);
 
 /* Helper function to get 'n' number of physical pages */
 paddr_t getppages(unsigned long);
+
+/* Helper function to zero out a page */
+void zero_out_page(unsigned long);
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);
