@@ -195,7 +195,6 @@ void zero_out_page(unsigned long page_num) {
 paddr_t getppages(unsigned long npages) {
 	// Cycle through the pages, try to get space raw
 	// Could not get enough mem, time to swap!
-
 	unsigned long count = 0;
 
   // If booted, then be atomic
@@ -203,15 +202,15 @@ paddr_t getppages(unsigned long npages) {
     spinlock_acquire(&coremap_lock);
   }
 
-	for (unsigned long i=0; i<COREMAP_PAGES; i++) {
+	for (unsigned long i = 0; i < COREMAP_PAGES; ++i) {
 		// Find a series of unallocated page that matches npages.
 		if (!coremap[i].allocated) {
-			count++;  // Increment the count
+			++count;  // Increment the count
 		} else {
 			count = 0;  // Reset the count
 		}
 
-		// If we have what we need
+		// If we found a series of unallocated pages, then prepare them for use.
 		if (count == npages) {
 			// Get the starting address
 			unsigned long page_num = i - (count - 1);
@@ -324,6 +323,7 @@ void free_kpages(vaddr_t vaddr) {
 
   // If this returns 0 then that means it is not a valid virtual address.
   // Virtual addresses shouldn't be valid at 0 anyways.
+  // Maybe it has already been cleared?
   if (paddr == 0) {
     // TODO: Error catching?
     return;
@@ -333,8 +333,22 @@ void free_kpages(vaddr_t vaddr) {
   // Identify the physical page on the coremap array
   unsigned ppage_coremap_index = (paddr - coremap_pagestartaddr) % PAGE_SIZE;
 
+  // Find the first page of the virtual page block.
+  // Make sure it doesn't go too far up front...
+  while (ppage_coremap_index != 0 && coremap[ppage_coremap_index].block_size == -1) {
+    --ppage_coremap_index;
+  }
+
   // Determine that the page is no longer allocated.
   coremap[ppage_coremap_index].allocated = false;
+  zero_out_page(ppage_coremap_index);
+
+  // Also deallocate any sequential blocks if there are any.
+  for (long i = 1; i < coremap[ppage_coremap_index].block_size; ++i) {
+    coremap[ppage_coremap_index + i].allocated = false;
+    zero_out_page(ppage_coremap_index + i);
+  }
+
 
   // TODO: Destroy the physical page's content.
 // void free_kpages(vaddr_t addr) {
