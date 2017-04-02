@@ -196,37 +196,38 @@ paddr_t getppages(unsigned long npages) {
 	// Cycle through the pages, try to get space raw
 	// Could not get enough mem, time to swap!
 
-	unsigned long count = 0;
+  unsigned long count = 0;
 
   // If booted, then be atomic
   if (vm_booted) {
     spinlock_acquire(&coremap_lock);
   }
 
-	for (unsigned long i=0; i<COREMAP_PAGES; i++) {
-		// Find a series of unallocated page that matches npages.
-		if (!coremap[i].allocated) {
-			count++;  // Increment the count
-		} else {
-			count = 0;  // Reset the count
-		}
+  for (unsigned long i=0; i<COREMAP_PAGES; i++) {
+    
+    // Find a series of unallocated page that matches npages.
+    if (!coremap[i].allocated) {
+      count++;  // Increment the count
+    } else {
+      count = 0;  // Reset the count
+    }
 
-		// If we have what we need
-		if (count == npages) {
-			// Get the starting address
+    // If we have what we need
+    if (count == npages) {
+	// Get the starting address
 			unsigned long page_num = i - (count - 1);
 
       // Calculate the physical address for the first page allocated.
       paddr_t paddr = (page_num * PAGE_SIZE) + coremap_pagestartaddr;
       KASSERT(paddr != 0);
 
-			// Mark those pages as allocated
-			for (unsigned long j = 0; j < count; j++) {
-				coremap[page_num + j].allocated = true;
+      // Mark those pages as allocated
+      for (unsigned long j = 0; j < count; j++) {
+        coremap[page_num + j].allocated = true;
 
         // Initialize value for block_size for all pages.
         coremap[page_num + j].block_size = 0;
-			}
+      }
 
       // Remember to set the block_size for the first page
       coremap[page_num].block_size = npages;
@@ -236,10 +237,10 @@ paddr_t getppages(unsigned long npages) {
         spinlock_release(&coremap_lock);
       }
 
-			// Return the correct address
-			return paddr;
-		}
-	}
+      // Return the correct address
+      return paddr;
+    }
+  }
 
   // If booted, then be atomic
   if (vm_booted) {
@@ -247,22 +248,21 @@ paddr_t getppages(unsigned long npages) {
   }
 
   // If not enough pages are found, return 0
-	return 0;
+  return 0;
 }
 
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages) {
 
-	// Get address for n physical pages
-	paddr_t addr = getppages(npages);
+  // Get address for n physical pages
+  paddr_t addr = getppages(npages);
 
   // Make sure its valid
-	if (addr != 0) {
-
+  if (addr != 0) {
     // Return the virtual kernel address
-		return PADDR_TO_KVADDR(addr);
-	}
+    return PADDR_TO_KVADDR(addr);
+  }
   return 0;
 }
 
