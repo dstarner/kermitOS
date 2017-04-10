@@ -249,22 +249,7 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
     spinlock_release(&coremap_lock);
   }
 
-  kprintf("Trying to find %lu pages....\n", npages);
       
-  for(unsigned int pg=0; pg<COREMAP_PAGES; pg++) {
-    switch(coremap[pg].state) {
-      case FREE:
-        kprintf("-");
-        break;
-      case KERNEL:
-        kprintf("K");
-        break;
-      case USER:
-        kprintf("U");
-        break;
-    }
-  }
-
   // If not enough pages are found, return 0
   return 0;
 }
@@ -363,13 +348,16 @@ void free_kpages(vaddr_t addr) {
   // Make sure that the page is actually allocated
   KASSERT(coremap[page_num].state != FREE);
 
-  for (unsigned int offset = 0; offset < coremap[page_num].block_size; offset++) {
+
+  unsigned long blocks = coremap[page_num].block_size;
+
+  for (unsigned long offset = 0; offset < blocks; offset++) {
     coremap[page_num + offset].state = FREE;
     coremap[page_num + offset].block_size = 0;
-
     // Clear out the page
     zero_out_page(page_num);
   }
+
 
   // If booted, then be atomic
   if (vm_booted) {
