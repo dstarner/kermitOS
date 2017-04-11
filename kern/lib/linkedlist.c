@@ -52,3 +52,59 @@ void * get_from_llist(struct linkedlist * list, unsigned int index) {
   return NULL;
 
 }
+
+//quu..__
+// $$$b  `---.__
+//  "$$b        `--.                          ___.---uuudP
+//   `$$b           `.__.------.__     __.---'      $$$$"              .
+//     "$b          -'            `-.-'            $$$"              .'|
+//       ".                                       d$"             _.'  |
+//         `.   /                              ..."             .'     |
+//           `./                           ..::-'            _.'       |
+//            /                         .:::-'            .-'         .'
+//           :                          ::''\          _.'            |
+//          .' .-.             .-.           `.      .'               |
+//          : /'$$|           .@"$\           `.   .'              _.-'
+//         .'|$u$$|          |$$,$$|           |  <            _.-'
+//         | `:$$:'          :$$$$$:           `.  `.       .-'
+//         :                  `"--'             |    `-.     \
+//        :##.       ==             .###.       `.      `.    `\
+//        |##:                      :###:        |        >     >
+//        |#'     `..'`..'          `###'        x:      /     /
+//         \                                   xXX|     /    ./
+//          \                                xXXX'|    /   ./
+//          /`-.                                  `.  /   /
+//         :    `-  ...........,                   | /  .'
+//         |         ``:::::::'       .            |<    `.
+//         |             ```          |           x| \ `.:``.
+//         |                         .'    /'   xXX|  `:`M`M':.
+//         |    |                    ;    /:' xXXX'|  -'MMMMM:'
+//         `.  .'                   :    /:'       |-'MMMM.-'
+//          |  |                   .'   /'        .'MMM.-'
+//          `'`'                   :  ,'          |MMM<
+//            |                     `'            |tbap\
+//             \                                  :MM.-'
+//              \                 |              .''
+//               \.               `.            /
+//                /     .:::::::.. :           /
+//               |     .:::::::::::`.         /
+//               |   .:::------------\       /
+//              /   .''               >::'  /
+//              `',:                 :    .'
+
+struct linkedlist * deep_copy_llist(struct linkedlist * oldlist) {
+
+  // Create the new linked list
+  struct linkedlist * newlist = kmalloc(sizeof(struct linkedlist));
+
+  // Set the size
+  newlist->size = oldlist->size;
+
+  // If there's nothing to copy.
+  if (oldlist->size == 0) {
+    newlist->head = NULL;
+    return newlist;
+  }
+
+  // TODO: Finish me!
+}

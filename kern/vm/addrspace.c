@@ -30,6 +30,7 @@
 #include <types.h>
 #include <kern/errno.h>
 #include <lib.h>
+#include <linkedlist.h>
 #include <addrspace.h>
 #include <vm.h>
 #include <proc.h>
@@ -54,6 +55,16 @@ as_create(void)
 	 * Initialize as needed.
 	 */
 
+	 // 1+2. Create the page_table linked list, and segment linkedlist
+	 as->page_table = kmalloc(sizeof(struct linkedlist));
+	 as->page_table->size = 0;
+	 // Initialize Page table
+
+
+	 as->segments_list = kmalloc(sizeof(struct linkedlist));
+	 as->segments_list->size = 0;
+	 // Initialize segments list
+
 	return as;
 }
 
@@ -72,6 +83,14 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	 */
 	// Copy memory from old addrspace to new addrspace
 	memcpy(newas, old, sizeof(struct addrspace));
+
+  // 1. Copy the heap
+	newas->heap_start = old->heap_start;
+	newas->heap_end = old->heap_end;
+
+	// 2. Copy over the page table and segments table
+	newas->page_table = deep_copy_llist(old->page_table);
+	newas->segments_list = deep_copy_llist(old->segments_list);
 
 	*ret = newas;
 	return 0;

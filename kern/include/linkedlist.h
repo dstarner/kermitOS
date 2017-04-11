@@ -23,3 +23,6 @@ void add_to_llist(struct linkedlist *, void *);
 
 /* Gets index from a linked list */
 void * get_from_llist(struct linkedlist *, unsigned int);
+
+/* Deep copy a linked list */
+struct linkedlist * deep_copy_llist(struct linkedlist *);
