@@ -189,7 +189,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 }
 
 void zero_out_page(unsigned long page_num) {
-  (void) page_num;
+  bzero((page_num * PAGE_SIZE) + coremap_pagestartaddr, PAGE_SIZE);
 }
 
 paddr_t getppages(unsigned long npages, bool isKernel) {
@@ -204,7 +204,7 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
   }
 
   for (unsigned long i=0; i<COREMAP_PAGES; i++) {
-    
+
     // Find a series of unallocated page that matches npages.
     if (coremap[i].state == FREE) {
       count++;  // Increment the count
@@ -228,6 +228,9 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
 
         // Initialize value for block_size for all pages.
         coremap[page_num + j].block_size = 0;
+
+        // Clear out the page
+        zero_out_page(page_num);
       }
 
       // Remember to set the block_size for the first page
@@ -249,7 +252,7 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
     spinlock_release(&coremap_lock);
   }
 
-      
+
   // If not enough pages are found, return 0
   return 0;
 }
@@ -354,8 +357,6 @@ void free_kpages(vaddr_t addr) {
   for (unsigned long offset = 0; offset < blocks; offset++) {
     coremap[page_num + offset].state = FREE;
     coremap[page_num + offset].block_size = 0;
-    // Clear out the page
-    zero_out_page(page_num);
   }
 
 
