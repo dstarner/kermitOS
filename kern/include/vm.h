@@ -36,8 +36,6 @@
 #define VM_FAULT_WRITE       1    /* A write was attempted */
 #define VM_FAULT_READONLY    2    /* A write to a readonly page was attempted*/
 
-// Different states a coremap block can take on
-
 // Structure for coremap entry
 struct coremap_page {
 

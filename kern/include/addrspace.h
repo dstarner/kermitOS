@@ -34,11 +34,33 @@
  * Address space structure and operations.
  */
 
-
+#include <lib/linkedlist>
 #include <vm.h>
 #include "opt-dumbvm.h"
 
+
 struct vnode;
+
+
+// Page table entry
+struct page_entry {
+  // State of the page
+  enum stateEnum {DIRTY, CLEAN} state;
+  // Virtual page this maps to
+  vaddr_t vpage_n;
+  // Physical Page this maps to
+  paddr_t ppage_n;
+
+};
+
+struct segment_entry {
+
+    // Start of the region
+    vaddr_t region_start;
+
+    // Size of the region
+    size_t region_size;
+};
 
 
 /*
@@ -49,16 +71,25 @@ struct vnode;
  */
 
 struct addrspace {
+
 #if OPT_DUMBVM
-        vaddr_t as_vbase1;
-        paddr_t as_pbase1;
-        size_t as_npages1;
-        vaddr_t as_vbase2;
-        paddr_t as_pbase2;
-        size_t as_npages2;
-        paddr_t as_stackpbase;
+  vaddr_t as_vbase1;
+  paddr_t as_pbase1;
+  size_t as_npages1;
+  vaddr_t as_vbase2;
+  paddr_t as_pbase2;
+  size_t as_npages2;
+  paddr_t as_stackpbase;
 #else
-        /* Put stuff here for your VM system */
+
+  // The page table for this addrspace
+  struct linkedlist * page_table;
+  struct linkedlist * segments_list;
+
+  // Start and end of the heap
+  vaddr_t heap_start;
+  vaddr_t heap_end;
+
 #endif
 };
 
