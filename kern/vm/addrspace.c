@@ -51,22 +51,13 @@ as_create(void)
 		return NULL;
 	}
 
-	/*
-	 * Initialize as needed.
-	 */
-
-	 // 1+2. Create the page_table linked list, and segment linkedlist
-	 as->page_table = kmalloc(sizeof(struct linkedlist));
-	 as->page_table->size = 0;
-	 // Initialize Page table
-
-
+   // Create the segments list
 	 as->segments_list = kmalloc(sizeof(struct linkedlist));
 	 as->segments_list->size = 0;
-	 // Initialize segments list
 
 	return as;
 }
+
 
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
@@ -81,16 +72,12 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	/*
 	 * Write this.
 	 */
+
 	// Copy memory from old addrspace to new addrspace
 	memcpy(newas, old, sizeof(struct addrspace));
 
-  // 1. Copy the heap
-	newas->heap_start = old->heap_start;
-	newas->heap_end = old->heap_end;
+	// 1. Copy over the page table and segments table
 
-	// 2. Copy over the page table and segments table
-	newas->page_table = deep_copy_llist(old->page_table);
-	newas->segments_list = deep_copy_llist(old->segments_list);
 
 	*ret = newas;
 	return 0;
@@ -120,9 +107,15 @@ as_activate(void)
 		return;
 	}
 
-	/*
-	 * Write this.
-	 */
+	 /* Disable interrupts on this CPU while frobbing the TLB. */
+ 	spl = splhigh();
+
+  /* Invalidate everything in the TLB */
+ 	for (i=0; i<NUM_TLB; i++) {
+ 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+ 	}
+
+ 	splx(spl);
 }
 
 void

@@ -50,16 +50,20 @@ struct page_entry {
   vaddr_t vpage_n;
   // Physical Page this maps to
   paddr_t ppage_n;
-
 };
 
 struct segment_entry {
-
     // Start of the region
     vaddr_t region_start;
-
     // Size of the region
     size_t region_size;
+    // Page table for the heap
+    struct linkedlist * page_table;
+
+    // What type of segment is this?
+    bool readable;
+    bool writable;
+    bool executable;
 };
 
 
@@ -82,13 +86,8 @@ struct addrspace {
   paddr_t as_stackpbase;
 #else
 
-  // The page table for this addrspace
-  struct linkedlist * page_table;
+  // The segments this address space has
   struct linkedlist * segments_list;
-
-  // Start and end of the heap
-  vaddr_t heap_start;
-  vaddr_t heap_end;
 
 #endif
 };
