@@ -28,6 +28,7 @@
  */
 
 #include <types.h>
+#include <spl.h>
 #include <kern/errno.h>
 #include <lib.h>
 #include <linkedlist.h>
@@ -96,7 +97,7 @@ as_destroy(struct addrspace *as)
 	 while (current != NULL) {
 
 		 // Get the current node's segment
-		 struct segment_entry * segment = (struct segment_entry *) current->datum;
+		 struct segment_entry * segment = (struct segment_entry *) current->data;
 
 		 // Delete the page table. False because we are deleting page_entries
 		 delete_llist(segment->page_table, false);
@@ -132,10 +133,10 @@ as_activate(void)
 	}
 
 	 /* Disable interrupts on this CPU while frobbing the TLB. */
- 	spl = splhigh();
+ 	int spl = splhigh();
 
-  /* Invalidate everything in the TLB */
- 	for (i=0; i<NUM_TLB; i++) {
+        /* Invalidate everything in the TLB */
+ 	for (unsigned int i=0; i<NUM_TLB; i++) {
 
 		// If the TLB entry is valid, then mark the virtual page as DIRTY.
 

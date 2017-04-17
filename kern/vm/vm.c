@@ -189,7 +189,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 }
 
 void zero_out_page(unsigned long page_num) {
-  bzero((page_num * PAGE_SIZE) + coremap_pagestartaddr, PAGE_SIZE);
+  bzero((void *)(page_num * PAGE_SIZE) + coremap_pagestartaddr, PAGE_SIZE);
 }
 
 paddr_t getppages(unsigned long npages, bool isKernel) {

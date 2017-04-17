@@ -1,8 +1,11 @@
+#include <types.h>
+#include <kern/errno.h>
+#include <lib.h>
 #include <linkedlist.h>
 
 
 /* Adds to a linked list */
-void add_to_llist(struct linkedlist list *, void * datum) {
+void add_to_llist(struct linkedlist * list, void * datum) {
 
   struct linkedlist_node * node = kmalloc(sizeof(struct linkedlist_node));
 
@@ -37,7 +40,7 @@ void * get_from_llist(struct linkedlist * list, unsigned int index) {
   if (list == NULL || list->size < index || list->head == NULL) return NULL;
 
   struct linkedlist_node * current = list->head;
-  unsigned int count;
+  unsigned int count = 0;
 
   while (current != NULL) {
 
@@ -53,44 +56,6 @@ void * get_from_llist(struct linkedlist * list, unsigned int index) {
 
 }
 
-//quu..__
-// $$$b  `---.__
-//  "$$b        `--.                          ___.---uuudP
-//   `$$b           `.__.------.__     __.---'      $$$$"              .
-//     "$b          -'            `-.-'            $$$"              .'|
-//       ".                                       d$"             _.'  |
-//         `.   /                              ..."             .'     |
-//           `./                           ..::-'            _.'       |
-//            /                         .:::-'            .-'         .'
-//           :                          ::''\          _.'            |
-//          .' .-.             .-.           `.      .'               |
-//          : /'$$|           .@"$\           `.   .'              _.-'
-//         .'|$u$$|          |$$,$$|           |  <            _.-'
-//         | `:$$:'          :$$$$$:           `.  `.       .-'
-//         :                  `"--'             |    `-.     \
-//        :##.       ==             .###.       `.      `.    `\
-//        |##:                      :###:        |        >     >
-//        |#'     `..'`..'          `###'        x:      /     /
-//         \                                   xXX|     /    ./
-//          \                                xXXX'|    /   ./
-//          /`-.                                  `.  /   /
-//         :    `-  ...........,                   | /  .'
-//         |         ``:::::::'       .            |<    `.
-//         |             ```          |           x| \ `.:``.
-//         |                         .'    /'   xXX|  `:`M`M':.
-//         |    |                    ;    /:' xXXX'|  -'MMMMM:'
-//         `.  .'                   :    /:'       |-'MMMM.-'
-//          |  |                   .'   /'        .'MMM.-'
-//          `'`'                   :  ,'          |MMM<
-//            |                     `'            |tbap\
-//             \                                  :MM.-'
-//              \                 |              .''
-//               \.               `.            /
-//                /     .:::::::.. :           /
-//               |     .:::::::::::`.         /
-//               |   .:::------------\       /
-//              /   .''               >::'  /
-//              `',:                 :    .'
 
 void delete_llist(struct linkedlist * list, bool isSegment) {
 
@@ -108,12 +73,12 @@ void delete_llist(struct linkedlist * list, bool isSegment) {
 
     // Delete the actual object
     if (isSegment) {
-      struct segment_entry * segment = (struct segment_entry *) current->datum;
+      struct segment_entry * segment = (struct segment_entry *) current->data;
       kfree(segment);
 
     } else {
 
-      struct page_entry * page = (struct page_entry *) current->datum;
+      struct page_entry * page = (struct page_entry *) current->data;
       kfree(page);
 
     }

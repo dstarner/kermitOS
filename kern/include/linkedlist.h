@@ -25,3 +25,5 @@ void add_to_llist(struct linkedlist *, void *);
 void * get_from_llist(struct linkedlist *, unsigned int);
 
 void delete_llist(struct linkedlist *, bool);
+
+#endif
