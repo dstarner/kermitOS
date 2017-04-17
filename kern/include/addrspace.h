@@ -34,7 +34,8 @@
  * Address space structure and operations.
  */
 
-#include <lib/linkedlist>
+#include <linkedlist.h>
+#include <mips/tlb.h>
 #include <vm.h>
 #include "opt-dumbvm.h"
 
@@ -45,7 +46,7 @@ struct vnode;
 // Page table entry
 struct page_entry {
   // State of the page
-  enum stateEnum {DIRTY, CLEAN} state;
+  enum pageStateEnum {DIRTY, CLEAN} state;
   // Virtual page this maps to
   vaddr_t vpage_n;
   // Physical Page this maps to
