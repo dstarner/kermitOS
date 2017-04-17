@@ -124,8 +124,6 @@ void delete_llist(struct linkedlist * list, bool isSegment) {
 
     // Set new current
     current = next;
-
-
   }
 
   // Free the list
