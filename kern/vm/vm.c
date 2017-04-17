@@ -107,10 +107,46 @@ void vm_bootstrap() {
 }
 
 /* Fault handling function called by trap code */
+/*
+ * When vm_fault is called, that means the process attempted to find a
+ * matching
+ */
 int vm_fault(int faulttype, vaddr_t faultaddress) {
-  // Commented this function out to see if the rest would work...
-  (void) faulttype;
-  (void) faultaddress;
+  // Try to find the physical address translation first.
+  // If the page isn't found, then it will become 0.
+  struct segment_entry * seg = find_segment_from_vaddr(faultaddress);
+
+  // If a segment is not found, that means the vaddr given is out of the bounds
+  // of the allocated regions and should return an error.
+  if (segment_entry == NULL) return EFAULT;
+
+  // If fault address is valid, check if fault address is in Page Table
+  struct page_entry * page = find_page_on_segment(seg);
+
+  // If not, then create a new PTE and allocate a new physical page dynamically.
+  if (page == NULL) {
+  }
+
+  switch (faulttype) {
+    // A read was attempted.
+    case VM_FAULT_READ:
+
+
+
+      break;
+
+    // A write was attempted.
+    case VM_FAULT_WRITE:
+  	  break;
+
+    // A write was attempted on a read only page, which is an error.
+    case VM_FAULT_READONLY:
+    // If the faulttype doesn't fall into any of the previous something went wrong.
+    default:
+  	  return EINVAL;
+  }
+
+
   return EFAULT;
 
   // paddr_t paddr;
@@ -124,19 +160,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   //
 	// DEBUG(DB_VM, "primevm: fault: 0x%x\n", faultaddress);
   //
-	// switch (faulttype) {
-  //   // A read was attempted.
-  //   case VM_FAULT_READ:
-  //   // A write was attempted.
-  //   case VM_FAULT_WRITE:
-	// 	  break;
-  //
-  //   // A write was attempted on a read only page, which is an error.
-  //   case VM_FAULT_READONLY:
-  //   // If the faulttype doesn't fall into any of the previous something went wrong.
-  //   default:
-	// 	  return EINVAL;
-	// }
+
   //
   // // ---------------------------
   // // Begin same code in DUMBVM. Probably needs modifying
@@ -186,6 +210,22 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 	// return EFAULT;
   // // End same code in DUMBVM.
   // // ---------------------------
+}
+
+/*
+ * Find a page entry on the provided segment. If it doesn't exist, it returns
+ * NULL.
+ */
+struct segment * find_segment_from_vaddr(vaddr_t vaddr) {
+  return NULL;
+}
+
+/*
+ * Find a page entry on the provided segment. If it doesn't exist, it returns
+ * NULL.
+ */
+struct page_entry * find_page_on_segment(segment_entry * segment) {
+  return NULL;
 }
 
 void zero_out_page(unsigned long page_num) {

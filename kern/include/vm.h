@@ -29,6 +29,7 @@
 
 #ifndef _VM_H_
 #define _VM_H_
+#include <addrspace.h>
 #include <machine/vm.h>
 
 /* Fault-type arguments to vm_fault() */
@@ -71,6 +72,9 @@ void vm_bootstrap(void);
 
 /* Fault handling function called by trap code */
 int vm_fault(int faulttype, vaddr_t faultaddress);
+
+struct segment_entry * find_segment_from_vaddr(vaddr_t);
+struct page_entry * find_page_on_segment(struct segment_entry *);
 
 /* Helper function to get 'n' number of physical pages */
 paddr_t getppages(unsigned long, bool);
