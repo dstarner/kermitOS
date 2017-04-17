@@ -36,6 +36,7 @@
 #include <vm.h>
 #include <proc.h>
 #include <array.h>
+#include <current.h>
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -147,9 +148,6 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 		return EINVAL;
 	}
 
-	// Number of pages needed to be allocated
-	unsigned long num_vpages = memsize / PAGE_SIZE;
-
   // Create the actual segment itself
 	struct segment_entry * segment = kmalloc(sizeof(struct segment_entry));
 
@@ -159,18 +157,18 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 
   // Set the permissions on this segment
 	if (readable < 1) segment->readable = true;
-	if (writable < 1) segment->writable = true;
+	if (writeable < 1) segment->writable = true;
 	if (executable < 1) segment->executable = true;
 
   // Initialize the page table
-	segment->page_table = = array_create();
+	segment->page_table = array_create();
 	if (segment->page_table == NULL) {
 		kfree(as);
 		return NULL;
 	}
 
   // Add it to the array
-	result = array_add(as->segments_list, (void *) segment, NULL);
+	int result = array_add(as->segments_list, (void *) segment, NULL);
 	if (result) {
 		segment_destroy(segment);
 		as_destroy(as);
@@ -206,7 +204,7 @@ int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
 
   // Set up the stack
-	result = as_define_region(as, USERSTACKBASE, USERSTACKSIZE, 1, 1, 0);
+	int result = as_define_region(as, USERSTACKBASE, USERSTACKSIZE, 1, 1, 0);
 
 	// If something happens, lets return it
  	if (result) {
@@ -227,7 +225,7 @@ void as_destroy(struct addrspace *as)
   struct segment_entry * segment;
 
   // Iterate through each of the segments
-	for (i = 0; (unsigned)i < array_num(as->segments_list); i++) {
+	for (unsigned int i = 0; i < array_num(as->segments_list); i++) {
 
 		// Get the segment and then destroy it.
 		segment = (struct segment_entry *) array_get(as->segments_list, i);
