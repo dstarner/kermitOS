@@ -82,7 +82,12 @@
  * We put the stack at the very top of user virtual memory because it
  * grows downwards.
  */
-#define USERSTACK     USERSPACETOP
+ #define USERSTACK     USERSPACETOP
+
+ // 2MB stack with 64k redzone under it
+ #define USERSTACKSIZE	(512*PAGE_SIZE)
+ #define USERSTACKBASE	(USERSTACK-USERSTACKSIZE)
+ #define USERSTACKREDZONE	65536
 
 /*
  * Interface to the low-level module that looks after the amount of

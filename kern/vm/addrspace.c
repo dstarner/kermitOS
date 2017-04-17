@@ -75,9 +75,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		return ENOMEM;
 	}
 
-	/*
-	 * Write this.
-	 */
+	(void) old;
 
 
 
@@ -164,7 +162,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	segment->page_table = array_create();
 	if (segment->page_table == NULL) {
 		kfree(as);
-		return NULL;
+		return ENOMEM;
 	}
 
   // Add it to the array
