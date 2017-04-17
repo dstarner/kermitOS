@@ -90,6 +90,30 @@ as_destroy(struct addrspace *as)
 	 * Clean up as needed.
 	 */
 
+	 // Start at the first node
+	 struct linkedlist_node * current = as->segments_list->head;
+
+	 while (current != NULL) {
+
+		 // Get the current node's segment
+		 struct segment_entry * segment = (struct segment_entry *) current->datum;
+
+		 // Delete the page table. False because we are deleting page_entries
+		 delete_llist(segment->page_table, false);
+
+		 // Get the next one and delete the current.
+     struct linkedlist_node * next = current->next;
+     kfree(current);
+
+     // Set new current
+     current = next;
+
+	}
+
+  // Delete the segments list
+	kfree(as->segments_list);
+
+  // Delete the addres sspace
 	kfree(as);
 }
 
@@ -112,6 +136,10 @@ as_activate(void)
 
   /* Invalidate everything in the TLB */
  	for (i=0; i<NUM_TLB; i++) {
+
+		// If the TLB entry is valid, then mark the virtual page as DIRTY.
+
+
  		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
  	}
 

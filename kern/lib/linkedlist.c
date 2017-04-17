@@ -92,19 +92,42 @@ void * get_from_llist(struct linkedlist * list, unsigned int index) {
 //              /   .''               >::'  /
 //              `',:                 :    .'
 
-struct linkedlist * deep_copy_llist(struct linkedlist * oldlist) {
+void delete_llist(struct linkedlist * list, bool isSegment) {
 
-  // Create the new linked list
-  struct linkedlist * newlist = kmalloc(sizeof(struct linkedlist));
-
-  // Set the size
-  newlist->size = oldlist->size;
-
-  // If there's nothing to copy.
-  if (oldlist->size == 0) {
-    newlist->head = NULL;
-    return newlist;
+  // Delete an empty list
+  if (list->size > 0 && list->head == NULL) {
+    kfree(list);
+    return;
   }
 
-  // TODO: Finish me!
+  // Start somewhere
+  struct linkedlist_node * current = list->head;
+
+  // Iterate over the list
+  while (current != NULL) {
+
+    // Delete the actual object
+    if (isSegment) {
+      struct segment_entry * segment = (struct segment_entry *) current->datum;
+      kfree(segment);
+
+    } else {
+
+      struct page_entry * page = (struct page_entry *) current->datum;
+      kfree(page);
+
+    }
+
+    // Get the next one and delete the current.
+    struct linkedlist_node * next = current->next;
+    kfree(current);
+
+    // Set new current
+    current = next;
+
+
+  }
+
+  // Free the list
+  kfree(list);
 }
