@@ -54,7 +54,7 @@ as_create(void)
 		return NULL;
 	}
 
-  // Create the segments list
+        // Create the segments list
 	as->segments_list = array_create();
 	if (as->segments_list == NULL) {
 	  kfree(as);
@@ -74,27 +74,27 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
 		return ENOMEM;
 	}
 
-	(void) old;
-
 	// Create the new array
 	newas->segments_list = array_create();
-	if (as->segments_list == NULL) {
+	if (newas->segments_list == NULL) {
 	  kfree(newas);
 		return ENOMEM;
 	}
 
-  struct segment_entry * old_seg, new_seg;
-	struct page_entry * old_page, new_page;
-  unsigned int size = array_num(old->segments_list);
+        struct segment_entry * old_seg;
+        struct segment_entry * new_seg;
+	struct page_entry * old_page;
+        struct page_entry * new_page;
+        unsigned int size = array_num(old->segments_list);
 
-  // Go through and copy segments
+        // Go through and copy segments
 	for (unsigned int i=0; i < size; i++) {
 
 		// Get the old segment
-		old_seg = (struct segment_entry *) array_get(as->segments_list, i);
+		old_seg = (struct segment_entry *) array_get(old->segments_list, i);
 
 		// Create the new segment
-		new_seg = kmalloc(sizeof(struct segment_entry));
+		new_seg = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
 
     // Copy start and size and permissions
 		new_seg->region_start = old_seg->region_start;
@@ -113,10 +113,10 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
 
 			// Copy over the virtual page info
       new_page->vpage_n = old_page->vpage_n;
-			if (segment->writeable) { new_page->state = DIRTY; }
+			if (new_seg->writeable) { new_page->state = DIRTY; }
 
 			// get a new physical page
-			new_page->ppage_n = getppage(1, false);
+			new_page->ppage_n = getppages(1, false);
 
 			if (new_page->ppage_n == 0) {
 				as_destroy(newas);
