@@ -54,19 +54,18 @@ as_create(void)
 		return NULL;
 	}
 
-   // Create the segments list
-	 as->segments_list = array_create();
-	 if (as->segments_list == NULL) {
-		 kfree(as);
-		 return NULL;
-	 }
+        // Create the segments list
+	as->segments_list = array_create();
+	if (as->segments_list == NULL) {
+	  kfree(as);
+		return NULL;
+	}
 
 	return as;
 }
 
 
-int
-as_copy(struct addrspace *old, struct addrspace **ret)
+int as_copy(struct addrspace *old, struct addrspace **ret)
 {
 	struct addrspace *newas;
 
@@ -75,12 +74,63 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		return ENOMEM;
 	}
 
-	(void) old;
+	// Create the new array
+	newas->segments_list = array_create();
+	if (newas->segments_list == NULL) {
+	  kfree(newas);
+		return ENOMEM;
+	}
 
+        struct segment_entry * old_seg;
+        struct segment_entry * new_seg;
+	struct page_entry * old_page;
+        struct page_entry * new_page;
+        unsigned int size = array_num(old->segments_list);
 
+        // Go through and copy segments
+	for (unsigned int i=0; i < size; i++) {
 
-	// 1. Copy over the page table and segments table
+		// Get the old segment
+		old_seg = (struct segment_entry *) array_get(old->segments_list, i);
 
+		// Create the new segment
+		new_seg = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
+
+    // Copy start and size and permissions
+		new_seg->region_start = old_seg->region_start;
+		new_seg->region_size = old_seg->region_size;
+		new_seg->writeable = old_seg->writeable;
+		new_seg->readable = old_seg->readable;
+		new_seg->executable = old_seg->executable;
+
+    unsigned int pt_size = array_num(old_seg->page_table);
+
+		// Copy the page table
+		for (unsigned int j=0; j < pt_size; j++) {
+      // Create a new page
+      old_page = array_get(old_seg->page_table, j);
+			new_page = kmalloc(sizeof(struct page_entry));
+
+			// Copy over the virtual page info
+      new_page->vpage_n = old_page->vpage_n;
+			if (new_seg->writeable) { new_page->state = DIRTY; }
+
+			// get a new physical page
+			new_page->ppage_n = getppages(1, false);
+
+			if (new_page->ppage_n == 0) {
+				as_destroy(newas);
+				return ENOMEM;
+			}
+
+			// Move memsize
+			// Check if in memory or swapped.
+			// TODO:
+			memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
+			        (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
+		}
+
+	}
 
 	*ret = newas;
 	return 0;
@@ -106,18 +156,13 @@ as_activate(void)
 
         /* Invalidate everything in the TLB */
  	for (unsigned int i=0; i<NUM_TLB; i++) {
-
-		// If the TLB entry is valid, then mark the virtual page as DIRTY.
-
-
  		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
  	}
 
  	splx(spl);
 }
 
-void
-as_deactivate(void)
+void as_deactivate(void)
 {
 	/*
 	 * Write this. For many designs it won't need to actually do
@@ -136,8 +181,7 @@ as_deactivate(void)
  * moment, these are ignored. When you write the VM system, you may
  * want to implement them.
  */
-int
-as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
+int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 		 int readable, int writeable, int executable)
 {
 
@@ -155,7 +199,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 
   // Set the permissions on this segment
 	if (readable < 1) segment->readable = true;
-	if (writeable < 1) segment->writable = true;
+	if (writeable < 1) segment->writeable = true;
 	if (executable < 1) segment->executable = true;
 
   // Initialize the page table
@@ -176,8 +220,8 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	return 0;
 }
 
-int
-as_prepare_load(struct addrspace *as)
+
+int as_prepare_load(struct addrspace *as)
 {
 	/*
 	 * Write this.
@@ -188,8 +232,8 @@ as_prepare_load(struct addrspace *as)
 	return 0;
 }
 
-int
-as_complete_load(struct addrspace *as)
+
+int as_complete_load(struct addrspace *as)
 {
 
 	KASSERT(as != NULL);
@@ -197,6 +241,7 @@ as_complete_load(struct addrspace *as)
 	(void)as;
 	return 0;
 }
+
 
 int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {

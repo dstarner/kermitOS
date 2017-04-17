@@ -46,7 +46,7 @@ paddr_t calculate_range(unsigned int pages) {
  */
 void coremap_bootstrap() {
 	// Physical memory address
-  // Get the first and last free address to manage
+        // Get the first and last free address to manage
 	paddr_t last_address = ram_getsize();
 	paddr_t first_address = ram_getfirstfree();
 
