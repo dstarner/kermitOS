@@ -35,8 +35,11 @@
 #include <lib.h>
 #include <uio.h>
 #include <clock.h>
+#include <mainbus.h>
+#include <synch.h>
 #include <thread.h>
 #include <proc.h>
+#include <current.h>
 #include <vfs.h>
 #include <sfs.h>
 #include <syscall.h>
@@ -93,10 +96,13 @@ cmd_progthread(void *ptr, unsigned long nargs)
 	if (result) {
 		kprintf("Running program %s failed: %s\n", args[0],
 			strerror(result));
+
+                sys_exit(result, false);
 		return;
 	}
 
 	/* NOTREACHED: runprogram only returns on error. */
+        sys_exit(result, false);
 }
 
 /*
@@ -127,6 +133,8 @@ common_prog(int nargs, char **args)
 
 	tc = thread_count;
 
+        proc->parent_pid = curproc->pid;
+
 	result = thread_fork(args[0] /* thread name */,
 			proc /* new process */,
 			cmd_progthread /* thread function */,
@@ -142,9 +150,16 @@ common_prog(int nargs, char **args)
 	 * once you write the code for handling that.
 	 */
 
+        int status, error;
+
+        sys_waitpid(proc->pid, &status, 0, &error);
+
 	// Wait for all threads to finish cleanup, otherwise khu be a bit behind,
 	// especially once swapping is enabled.
 	thread_wait_for_count(tc);
+
+        thread_wait_for_count(tc);
+
 
 	return 0;
 }
@@ -248,6 +263,21 @@ cmd_sync(int nargs, char **args)
 }
 
 /*
+ * Command for dropping to the debugger.
+ */
+static
+int
+cmd_debug(int nargs, char **args)
+{
+	(void)nargs;
+	(void)args;
+
+	mainbus_debugger();
+
+	return 0;
+}
+
+/*
  * Command for doing an intentional panic.
  */
 static
@@ -258,6 +288,81 @@ cmd_panic(int nargs, char **args)
 	(void)args;
 
 	panic("User requested panic\n");
+	return 0;
+}
+
+/*
+ * Subthread for intentially deadlocking.
+ */
+struct deadlock {
+	struct lock *lock1;
+	struct lock *lock2;
+};
+
+static
+void
+cmd_deadlockthread(void *ptr, unsigned long num)
+{
+	struct deadlock *dl = ptr;
+
+	(void)num;
+
+	/* If it doesn't wedge right away, keep trying... */
+	while (1) {
+		lock_acquire(dl->lock2);
+		lock_acquire(dl->lock1);
+		kprintf("+");
+		lock_release(dl->lock1);
+		lock_release(dl->lock2);
+	}
+}
+
+/*
+ * Command for doing an intentional deadlock.
+ */
+static
+int
+cmd_deadlock(int nargs, char **args)
+{
+	struct deadlock dl;
+	int result;
+
+	(void)nargs;
+	(void)args;
+
+	dl.lock1 = lock_create("deadlock1");
+	if (dl.lock1 == NULL) {
+		kprintf("lock_create failed\n");
+		return ENOMEM;
+	}
+	dl.lock2 = lock_create("deadlock2");
+	if (dl.lock2 == NULL) {
+		lock_destroy(dl.lock1);
+		kprintf("lock_create failed\n");
+		return ENOMEM;
+	}
+
+	result = thread_fork(args[0] /* thread name */,
+			NULL /* kernel thread */,
+			cmd_deadlockthread /* thread function */,
+			&dl /* thread arg */, 0 /* thread arg */);
+	if (result) {
+		kprintf("thread_fork failed: %s\n", strerror(result));
+		lock_release(dl.lock1);
+		lock_destroy(dl.lock2);
+		lock_destroy(dl.lock1);
+		return result;
+	}
+
+	/* If it doesn't wedge right away, keep trying... */
+	while (1) {
+		lock_acquire(dl.lock1);
+		lock_acquire(dl.lock2);
+		kprintf(".");
+		lock_release(dl.lock2);
+		lock_release(dl.lock1);
+	}
+	/* NOTREACHED */
 	return 0;
 }
 
@@ -463,7 +568,9 @@ static const char *opsmenu[] = {
 	"[cd]      Change directory          ",
 	"[pwd]     Print current directory   ",
 	"[sync]    Sync filesystems          ",
+	"[debug]   Drop to debugger          ",
 	"[panic]   Intentional panic         ",
+	"[deadlock] Intentional deadlock     ",
 	"[q]       Quit and shut down        ",
 	NULL
 };
@@ -499,6 +606,8 @@ static const char *testmenu[] = {
 	"[lt1]  Lock test 1           (1)    ",
 	"[lt2]  Lock test 2           (1*)   ",
 	"[lt3]  Lock test 3           (1*)   ",
+	"[lt4]  Lock test 4           (1*)   ",
+	"[lt5]  Lock test 5           (1*)   ",
 	"[cvt1] CV test 1             (1)    ",
 	"[cvt2] CV test 2             (1)    ",
 	"[cvt3] CV test 3             (1*)   ",
@@ -614,7 +723,9 @@ static struct {
 	{ "cd",		cmd_chdir },
 	{ "pwd",	cmd_pwd },
 	{ "sync",	cmd_sync },
+	{ "debug",	cmd_debug },
 	{ "panic",	cmd_panic },
+	{ "deadlock",	cmd_deadlock },
 	{ "q",		cmd_quit },
 	{ "exit",	cmd_quit },
 	{ "halt",	cmd_quit },
@@ -647,6 +758,8 @@ static struct {
 	{ "lt1",	locktest },
 	{ "lt2",	locktest2 },
 	{ "lt3",	locktest3 },
+	{ "lt4", 	locktest4 },
+	{ "lt5", 	locktest5 },
 	{ "cvt1",	cvtest },
 	{ "cvt2",	cvtest2 },
 	{ "cvt3",	cvtest3 },

@@ -28,8 +28,10 @@
  */
 
 #include <types.h>
+#include <spl.h>
 #include <kern/errno.h>
 #include <lib.h>
+#include <linkedlist.h>
 #include <addrspace.h>
 #include <vm.h>
 #include <proc.h>
@@ -50,12 +52,13 @@ as_create(void)
 		return NULL;
 	}
 
-	/*
-	 * Initialize as needed.
-	 */
+   // Create the segments list
+	 as->segments_list = kmalloc(sizeof(struct linkedlist));
+	 as->segments_list->size = 0;
 
 	return as;
 }
+
 
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
@@ -71,7 +74,11 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	 * Write this.
 	 */
 
-	(void)old;
+	// Copy memory from old addrspace to new addrspace
+	memcpy(newas, old, sizeof(struct addrspace));
+
+	// 1. Copy over the page table and segments table
+
 
 	*ret = newas;
 	return 0;
@@ -84,6 +91,30 @@ as_destroy(struct addrspace *as)
 	 * Clean up as needed.
 	 */
 
+	 // Start at the first node
+	 struct linkedlist_node * current = as->segments_list->head;
+
+	 while (current != NULL) {
+
+		 // Get the current node's segment
+		 struct segment_entry * segment = (struct segment_entry *) current->data;
+
+		 // Delete the page table. False because we are deleting page_entries
+		 delete_llist(segment->page_table, false);
+
+		 // Get the next one and delete the current.
+     struct linkedlist_node * next = current->next;
+     kfree(current);
+
+     // Set new current
+     current = next;
+
+	}
+
+  // Delete the segments list
+	kfree(as->segments_list);
+
+  // Delete the addres sspace
 	kfree(as);
 }
 
@@ -101,9 +132,19 @@ as_activate(void)
 		return;
 	}
 
-	/*
-	 * Write this.
-	 */
+	 /* Disable interrupts on this CPU while frobbing the TLB. */
+ 	int spl = splhigh();
+
+        /* Invalidate everything in the TLB */
+ 	for (unsigned int i=0; i<NUM_TLB; i++) {
+
+		// If the TLB entry is valid, then mark the virtual page as DIRTY.
+
+
+ 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+ 	}
+
+ 	splx(spl);
 }
 
 void
@@ -179,4 +220,3 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 	return 0;
 }
-

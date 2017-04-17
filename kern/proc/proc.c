@@ -44,23 +44,28 @@
 
 #include <types.h>
 #include <spl.h>
+#include <synch.h>
 #include <proc.h>
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
+#include <kern/errno.h>
+#include <syscall.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
  */
 struct proc *kproc;
 
+struct proc *procs[128];
+
+
 /*
  * Create a proc structure.
  */
 static
 struct proc *
-proc_create(const char *name)
-{
+proc_create(const char *name) {
 	struct proc *proc;
 
 	proc = kmalloc(sizeof(*proc));
@@ -82,7 +87,68 @@ proc_create(const char *name)
 	/* VFS fields */
 	proc->p_cwd = NULL;
 
-	return proc;
+	// Null out file table
+	for(int fd = 0; fd < __OPEN_MAX; fd++) {
+ 		proc->f_table[fd] = NULL;
+	}
+
+	// Lock and exit stuff
+ 	proc->e_lock = lock_create("Process lock");
+	if (proc->e_lock == NULL) {
+		kfree(proc->p_name);
+		kfree(proc);
+		return NULL;
+	}
+	
+	proc->e_cv = cv_create("Process CV");
+	if (proc->e_cv == NULL) {
+		lock_destroy(proc->e_lock);
+		kfree(proc->p_name);
+		kfree(proc);
+		return NULL;
+	}
+
+	proc->can_exit = false;
+        proc->parent_pid = -1;
+
+	// Get a process ID
+	for (int i=0; i < 128; i++) {
+		// Assign to empty
+		if (procs[i] == NULL) {
+			proc->pid = i;
+			procs[i] = proc;
+			if (procs[i] == NULL) {
+				return NULL;
+			}
+			return proc;
+		}
+	}
+
+	// Could not find a process ID
+	return NULL;
+}
+
+
+struct proc * proc_new_child(const char * new_name) {
+	struct proc *new_proc;
+	// Create the proc
+	new_proc = proc_create(new_name);
+	if (new_proc == NULL) {
+		return NULL;
+	}
+
+	new_proc->parent_pid = curproc->pid;
+
+	// Copy file table
+	for(int fd=0;fd<OPEN_MAX;fd++) {
+		new_proc->f_table[fd] = curproc->f_table[fd];
+		if(new_proc->f_table[fd] != NULL) {
+			// Another process is using
+			new_proc->f_table[fd]->ref_count++;
+		}
+	}
+
+	return new_proc;
 }
 
 /*
@@ -164,6 +230,10 @@ proc_destroy(struct proc *proc)
 		}
 		as_destroy(as);
 	}
+
+	// Destroy the synch variables
+	lock_destroy(proc->e_lock);
+	cv_destroy(proc->e_cv);
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);

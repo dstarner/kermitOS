@@ -29,14 +29,6 @@
 
 #ifndef _VM_H_
 #define _VM_H_
-
-/*
- * VM system-related definitions.
- *
- * You'll probably want to add stuff here.
- */
-
-
 #include <machine/vm.h>
 
 /* Fault-type arguments to vm_fault() */
@@ -44,6 +36,35 @@
 #define VM_FAULT_WRITE       1    /* A write was attempted */
 #define VM_FAULT_READONLY    2    /* A write to a readonly page was attempted*/
 
+// Structure for coremap entry
+struct coremap_page {
+
+    // Current state of this block
+    enum stateEnum {FREE, KERNEL, USER} state;
+
+    // Series of blocks following this page:
+    unsigned long block_size;
+};
+
+// Starting address for the coremap
+paddr_t coremap_startaddr;
+
+// Starting address for the coremap physically pages
+paddr_t coremap_pagestartaddr;
+
+// The number of pages in the coremap
+unsigned int COREMAP_PAGES;
+unsigned int current_page;
+
+// Array based coremap
+struct coremap_page *coremap;
+
+// If the vm manager has booted
+bool vm_booted;
+
+/* Initialization function for coremap */
+void coremap_bootstrap(void);
+paddr_t calculate_range(unsigned int);
 
 /* Initialization function */
 void vm_bootstrap(void);
@@ -51,9 +72,18 @@ void vm_bootstrap(void);
 /* Fault handling function called by trap code */
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
+/* Helper function to get 'n' number of physical pages */
+paddr_t getppages(unsigned long, bool);
+
+// Helper function to get physical address from virtual address.
+// paddr_t get_paddr_from_vaddr(vaddr_t vaddr);
+
+// Helper function to remove data from a page.
+void zero_out_page(unsigned long pagesum);
+
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);
-void free_kpages(vaddr_t addr);
+void free_kpages(vaddr_t vaddr);
 
 /*
  * Return amount of memory (in bytes) used by allocated coremap pages.  If

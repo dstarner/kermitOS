@@ -40,12 +40,47 @@
 #include <test.h>
 #include <synch.h>
 
+// So, here I'm going to put all my thoughts....
+// You need conditional variables to wait and signal when correct
+// numbers are hit. You also need to keep track of the 
+// number of each type
+
+
+// GAMEPLAN:
+// 1. when X is called, increment X_num.
+// 2. If Y and Z have numbers greater than 0, then great! 
+//    they can all mate.
+
+
+// Lock to protect critial section of shared memory.
+struct lock* cock_block_lock;
+
+// The number of each type
+unsigned int male_num; unsigned int female_num; unsigned int matchmaker_num;
+
+// The conditional variables for each
+struct cv* male_cv; struct cv* female_cv; struct cv* matchmaker_cv;
+
+
 /*
  * Called by the driver during initialization.
  */
 
 void whalemating_init() {
-	return;
+
+        // Create all of the cv's
+        male_cv = cv_create("Male");
+        female_cv = cv_create("Female");
+        matchmaker_cv = cv_create("Matchmaker");
+
+        // Create the lock
+        cock_block_lock = lock_create("cock blocker");
+
+        KASSERT(cock_block_lock != NULL);
+
+        // Make sure nothing blew up
+        KASSERT(male_cv != NULL && female_cv != NULL && matchmaker_cv != NULL);
+
 }
 
 /*
@@ -54,38 +89,143 @@ void whalemating_init() {
 
 void
 whalemating_cleanup() {
-	return;
+        // CLEAN IT ALL UP!!!
+        // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+        // ░░░░░░░▄▄▀▀▀▀▀▀▀▀▀▀▄▄█▄░░░░▄░░░░█░░░░░░░
+        // ░░░░░░█▀░░░░░░░░░░░░░▀▀█▄░░░▀░░░░░░░░░▄░
+        // ░░░░▄▀░░░░░░░░░░░░░░░░░▀██░░░▄▀▀▀▄▄░░▀░░
+        // ░░▄█▀▄█▀▀▀▀▄░░░░░░▄▀▀█▄░▀█▄░░█▄░░░▀█░░░░
+        // ░▄█░▄▀░░▄▄▄░█░░░▄▀▄█▄░▀█░░█▄░░▀█░░░░█░░░
+        // ▄█░░█░░░▀▀▀░█░░▄█░▀▀▀░░█░░░█▄░░█░░░░█░░░
+        // ██░░░▀▄░░░▄█▀░░░▀▄▄▄▄▄█▀░░░▀█░░█▄░░░█░░░
+        // ██░░░░░▀▀▀░░░░░░░░░░░░░░░░░░█░▄█░░░░█░░░
+        // ██░░░░░░░░░░░░░░░░░░░░░█░░░░██▀░░░░█▄░░░
+        // ██░░░░░░░░░░░░░░░░░░░░░█░░░░█░░░░░░░▀▀█▄
+        // ██░░░░░░░░░░░░░░░░░░░░█░░░░░█░░░░░░░▄▄██
+        // ░██░░░░░░░░░░░░░░░░░░▄▀░░░░░█░░░░░░░▀▀█▄
+        // ░▀█░░░░░░█░░░░░░░░░▄█▀░░░░░░█░░░░░░░▄▄██
+        // ░▄██▄░░░░░▀▀▀▄▄▄▄▀▀░░░░░░░░░█░░░░░░░▀▀█▄
+        // ░░▀▀▀▀░░░░░░░░░░░░░░░░░░░░░░█▄▄▄▄▄▄▄▄▄██
+        // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+        cv_destroy(male_cv);
+        cv_destroy(female_cv);
+        cv_destroy(matchmaker_cv);
+        lock_destroy(cock_block_lock);
 }
 
 void
 male(uint32_t index)
 {
-	(void)index;
-	/*
-	 * Implement this function by calling male_start and male_end when
-	 * appropriate.
-	 */
-	return;
+
+        male_start(index);
+
+        // Get the lock
+        lock_acquire(cock_block_lock);
+        // All of the checking code below here
+
+        male_num++;
+
+        if (matchmaker_num > 0 && female_num > 0) {
+                // Reduce the male count
+                male_num--;
+
+                // Reduce female count
+                female_num--;
+                cv_signal(female_cv, cock_block_lock);
+                
+                // Reduce female count
+                matchmaker_num--;
+                cv_signal(matchmaker_cv, cock_block_lock);
+        } else {
+                // Wait until there is a suitable partner.
+                // Good man, Mr. Whale, it is better to wait for Mrs Right!
+                cv_wait(male_cv, cock_block_lock);
+
+        }
+
+        // ... and above here
+        male_end(index);
+
+        // Release the lock
+        lock_release(cock_block_lock);
+        
+
 }
 
 void
 female(uint32_t index)
 {
-	(void)index;
-	/*
-	 * Implement this function by calling female_start and female_end when
-	 * appropriate.
-	 */
-	return;
+
+        female_start(index);
+
+        // Get the lock
+        lock_acquire(cock_block_lock);
+        // All of the checking code below here
+
+        female_num++;
+
+        if (matchmaker_num > 0 && male_num > 0) {
+                // Reduce the female count
+                female_num--;
+
+                // Reduce male count
+                male_num--;
+                cv_signal(male_cv, cock_block_lock);
+
+                // Reduce matchmaker count
+                matchmaker_num--;
+                cv_signal(matchmaker_cv, cock_block_lock);
+        } else {
+                // Wait until there is a suitable partner.
+                // Good man, Mrs. Whale, it is better to wait for Mr Right!
+                cv_wait(female_cv, cock_block_lock);
+
+        }
+
+        // ... and above here
+
+        female_end(index);
+        // Release the lock
+        lock_release(cock_block_lock);
+
+
 }
 
 void
 matchmaker(uint32_t index)
 {
-	(void)index;
-	/*
-	 * Implement this function by calling matchmaker_start and matchmaker_end
-	 * when appropriate.
-	 */
-	return;
+
+        matchmaker_start(index);
+
+        // Get the lock
+        lock_acquire(cock_block_lock);
+        // All of the checking code below here
+
+        matchmaker_num++;
+
+        if (male_num > 0 && female_num > 0) {
+                // Reduce the male count
+                matchmaker_num--;
+
+                // Reduce female count
+                female_num--;
+                cv_signal(female_cv, cock_block_lock);
+
+                // Reduce male count
+                male_num--;
+                cv_signal(male_cv, cock_block_lock);
+        } else {
+                // Wait until there is a suitable partner.
+                // Good man, Mr. Whale, it is better to wait for Mrs Right!
+                cv_wait(matchmaker_cv, cock_block_lock);
+
+        }
+
+        // ... and above here
+
+        matchmaker_end(index);
+        // Release the lock
+        lock_release(cock_block_lock);
+
+
 }

@@ -55,6 +55,9 @@ size_t mainbus_ramsize(void);
 /* Switch on an inter-processor interrupt. (Low-level.) */
 void mainbus_send_ipi(struct cpu *target);
 
+/* Request breaking into the debugger, where available. */
+void mainbus_debugger(void);
+
 /*
  * The various ways to shut down the system. (These are very low-level
  * and should generally not be called directly - md_poweroff, for

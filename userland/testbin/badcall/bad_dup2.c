@@ -116,13 +116,15 @@ dup2_self(void)
 		report_result(rv, errno);
 		if (rv==0 || (rv==-1 && errno==ESPIPE)) {
 			report_passed(&failure);
+			printf("lseek passed\n");
 		}
 		else {
 			report_failure(&failure);
 		}
 	}
-
+	printf("closing testfd\n");
 	close(testfd);
+	printf("closed testfd\n");
 	return failure;
 }
 

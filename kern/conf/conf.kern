@@ -283,6 +283,7 @@ file      lib/kprintf.c
 file      lib/misc.c
 file      lib/time.c
 file      lib/uio.c
+file      lib/linkedlist.c
 
 defoption noasserts
 
@@ -334,6 +335,9 @@ file      thread/synch.c
 file      thread/thread.c
 file      thread/threadlist.c
 
+defoption hangman
+optfile   hangman thread/hangman.c
+
 #
 # Process system
 #
@@ -345,6 +349,7 @@ file      proc/proc.c
 # (you will probably want to add stuff here while doing the VM assignment)
 #
 
+file      vm/vm.c
 file      vm/kmalloc.c
 
 optofffile dumbvm   vm/addrspace.c
@@ -384,6 +389,8 @@ file      vfs/devnull.c
 file      syscall/loadelf.c
 file      syscall/runprogram.c
 file      syscall/time_syscalls.c
+file      syscall/syscall_file.c
+file      syscall/syscall_proc.c
 
 #
 # Startup and initialization

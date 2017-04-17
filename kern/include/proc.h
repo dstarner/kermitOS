@@ -37,6 +37,8 @@
  */
 
 #include <spinlock.h>
+#include <limits.h>
+#include <synch.h>
 
 struct addrspace;
 struct thread;
@@ -70,11 +72,28 @@ struct proc {
 	/* VFS */
 	struct vnode *p_cwd;		/* current working directory */
 
-	/* add more material here as needed */
+	/* File table...Each process is allowed 128 files open */
+	struct f_handler *f_table[OPEN_MAX];
+
+	/*Process ID */
+	pid_t pid;
+
+	pid_t parent_pid;
+
+	// Used for exit and waitpid
+	struct lock *e_lock;
+	struct cv *e_cv;
+	bool can_exit;
+	int exit_code;
 };
+
+/* Array of all of the processes */
+extern struct proc *procs[128];
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;
+
+struct proc * proc_new_child(const char *name);
 
 /* Call once during system startup to allocate data structures. */
 void proc_bootstrap(void);

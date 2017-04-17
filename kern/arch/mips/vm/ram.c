@@ -69,8 +69,7 @@ ram_bootstrap(void)
 	 */
 	firstpaddr = firstfree - MIPS_KSEG0;
 
-	kprintf("%uk physical memory available\n",
-		(lastpaddr-firstpaddr)/1024);
+	kprintf("%uk physical memory available\n", (lastpaddr-firstpaddr)/1024);
 }
 
 /*
@@ -108,6 +107,7 @@ ram_stealmem(unsigned long npages)
 
 	return paddr;
 }
+
 
 /*
  * This function is intended to be called by the VM system when it
