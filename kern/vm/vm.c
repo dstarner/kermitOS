@@ -112,104 +112,107 @@ void vm_bootstrap() {
  * matching
  */
 int vm_fault(int faulttype, vaddr_t faultaddress) {
+  // Declare these variables for use later.
+  paddr_t paddr;
+	struct addrspace *as;
+	int spl;
+
+  if (curproc == NULL) {
+  	/*
+  	 * No process. This is probably a kernel fault early in boot. Return EFAULT
+     * so as to panic instead of getting into an infinite faulting loop.
+  	 */
+  	return EFAULT;
+  }
+
+  as = proc_getas();
+  if (as == NULL) {
+    /*
+     * No address space set up. This is probably also a kernel fault early in boot.
+     */
+    return EFAULT;
+  }
+
+  // First align the fault address to the starting address of the page
+	faultaddress &= PAGE_FRAME;
+
   // Try to find the physical address translation first.
   // If the page isn't found, then it will become 0.
   struct segment_entry * seg = find_segment_from_vaddr(faultaddress);
 
   // If a segment is not found, that means the vaddr given is out of the bounds
   // of the allocated regions and should return an error.
-  if (segment_entry == NULL) return EFAULT;
+  // TODO: Stack overflow vs heap out-of-bounds
+  if (seg == NULL) return EFAULT;
 
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg);
 
-  // If not, then create a new PTE and allocate a new physical page dynamically.
-  if (page == NULL) {
-  }
-
   switch (faulttype) {
-    // A read was attempted.
     case VM_FAULT_READ:
-
-
-
+      // If the page isn't found, there's something wrong and there is a
+      // segmentation fault.
+      if (page == NULL) return EFAULT;
       break;
 
-    // A write was attempted.
     case VM_FAULT_WRITE:
+      // If no page, then create a new PTE and allocate a new physical page
+      // dynamically.
+      if (page == NULL) {
+        // Allocate a new physical page
+        paddr = getppages(1, false);
+
+        // Create a new page entry to reference the physical page that was
+        // just requested.
+        page = kmalloc(sizeof(struct page_entry));
+
+        // Set the values of the new page created.
+        page->ppage_n = paddr;
+        page->vpage_n = faultaddress;
+        page->state = DIRTY; // If a page is writable then assume it's dirty.
+
+      } else {
+        // If it reaches here, that means the page is already available.
+        // Just grab the physical address translation from the page and put
+        // it in the paddr variable to add it to the TLB later.
+        paddr = page->ppage_n;
+      }
+
   	  break;
 
     // A write was attempted on a read only page, which is an error.
+    // That means the physical address on the TLB is dirty.
     case VM_FAULT_READONLY:
-    // If the faulttype doesn't fall into any of the previous something went wrong.
+      // I don't know what to do here, so I'll just do the default case...
     default:
   	  return EINVAL;
-  }
+  } // End of case switch
 
+  // I believe this part attempts to find an available TLB page entry and caches
+  // it to the TLB.
+  /* Disable interrupts on this CPU while frobbing the TLB. */
+	spl = splhigh();
+  uint32_t ehi, elo;
+  int i;
 
-  return EFAULT;
+	for (i=0; i<NUM_TLB; i++) {
+		tlb_read(&ehi, &elo, i);
+		if (elo & TLBLO_VALID) {
+			continue;
+		}
+		ehi = faultaddress;
+		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+		DEBUG(DB_VM, "primevm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		tlb_write(ehi, elo, i);
+		splx(spl);
+		return 0;
+	}
 
-  // paddr_t paddr;
-  // int i;
-  // uint32_t ehi, elo;
-  // struct addrspace *as;
-  // int spl;
-  //
-  // // I think this gets the page number from fault addr */
-  // faultaddress &= PAGE_FRAME; // Bitwise and
-  //
-	// DEBUG(DB_VM, "primevm: fault: 0x%x\n", faultaddress);
-  //
-
-  //
-  // // ---------------------------
-  // // Begin same code in DUMBVM. Probably needs modifying
-  // if (curproc == NULL) {
-	// 	/*
-	// 	 * No process. This is probably a kernel fault early in boot. Return EFAULT
-  //    * so as to panic instead of getting into an infinite faulting loop.
-	// 	 */
-	// 	return EFAULT;
-	// }
-  //
-  // as = proc_getas();
-  // if (as == NULL) {
-  //   /*
-  //    * No address space set up. This is probably also a kernel fault early in boot.
-  //    */
-  //   return EFAULT;
-  // }
-  //
-  // // TODO: Invalid addresses outside of allowed virtual memory space needs to be handled.
-  //
-  // // TODO: Convert virtual address to physical address.
-  // (void) paddr;
-  // int vpage
-  //
-  // // I believe this part attempts to find an available TLB page entry and caches it to the TLB.
-  // /* Disable interrupts on this CPU while frobbing the TLB. */
-	// spl = splhigh();
-  //
-	// for (i=0; i<NUM_TLB; i++) {
-	// 	tlb_read(&ehi, &elo, i);
-	// 	if (elo & TLBLO_VALID) {
-	// 		continue;
-	// 	}
-	// 	ehi = faultaddress;
-	// 	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-	// 	DEBUG(DB_VM, "primevm: 0x%x -> 0x%x\n", faultaddress, paddr);
-	// 	tlb_write(ehi, elo, i);
-	// 	splx(spl);
-	// 	return 0;
-	// }
-  //
-  // // The problem with this right now is that it doesn't know how to evict entries
-  // // from the TLB if there aren't any invalid TLB entries and returns errors.
-	// kprintf("primevm: Ran out of TLB entries - cannot handle page fault\n");
-	// splx(spl);
-	// return EFAULT;
-  // // End same code in DUMBVM.
-  // // ---------------------------
+  // The problem with this right now is that it doesn't know how to evict entries
+  // from the TLB if there aren't any invalid TLB entries and returns errors.
+	kprintf("primevm: Ran out of TLB entries - cannot handle page fault\n");
+	splx(spl);
+	return EFAULT;
 }
 
 /*
@@ -228,10 +231,13 @@ struct page_entry * find_page_on_segment(segment_entry * segment) {
   return NULL;
 }
 
-void zero_out_page(unsigned long page_num) {
-  //bzero((void *)(page_num * PAGE_SIZE) + coremap_pagestartaddr, PAGE_SIZE);
-  (void) page_num;
+static
+void
+as_zero_region(paddr_t paddr, unsigned npages)
+{
+	bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
 }
+
 
 paddr_t getppages(unsigned long npages, bool isKernel) {
 	// Cycle through the pages, try to get space raw
@@ -271,7 +277,7 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
         coremap[page_num + j].block_size = 0;
 
         // Clear out the page
-        zero_out_page(page_num);
+        as_zero_region(page_num);
       }
 
       // Remember to set the block_size for the first page
@@ -282,7 +288,6 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
         spinlock_release(&coremap_lock);
       }
 
-
       // Return the correct address
       return paddr;
     }
@@ -292,7 +297,6 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
   if (vm_booted) {
     spinlock_release(&coremap_lock);
   }
-
 
   // If not enough pages are found, return 0
   return 0;

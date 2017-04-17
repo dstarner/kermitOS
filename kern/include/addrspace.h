@@ -55,6 +55,9 @@ struct page_entry {
   // Physical Page this maps to
   paddr_t ppage_n;
 
+  // This will also need the location on disk
+  // TODO
+
 };
 
 struct segment_entry {
