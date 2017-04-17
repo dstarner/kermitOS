@@ -38,6 +38,7 @@
 #include <mips/tlb.h>
 #include <vm.h>
 #include "opt-dumbvm.h"
+#include <array.h>
 
 
 struct vnode;
@@ -47,10 +48,13 @@ struct vnode;
 struct page_entry {
   // State of the page
   enum pageStateEnum {DIRTY, CLEAN} state;
+
   // Virtual page this maps to
   vaddr_t vpage_n;
+
   // Physical Page this maps to
   paddr_t ppage_n;
+
 };
 
 struct segment_entry {
@@ -59,12 +63,13 @@ struct segment_entry {
     // Size of the region
     size_t region_size;
     // Page table for the heap
-    struct linkedlist * page_table;
+    struct array * page_table;
 
     // What type of segment is this?
     bool readable;
     bool writable;
     bool executable;
+    bool isHeap;
 };
 
 
@@ -88,7 +93,7 @@ struct addrspace {
 #else
 
   // The segments this address space has
-  struct linkedlist * segments_list;
+  struct array * segments_list;
 
 #endif
 };
@@ -158,6 +163,8 @@ int               as_define_stack(struct addrspace *as, vaddr_t *initstackptr);
  */
 
 int load_elf(struct vnode *v, vaddr_t *entrypoint);
+
+void segment_destroy(struct segment_entry *);
 
 
 #endif /* _ADDRSPACE_H_ */

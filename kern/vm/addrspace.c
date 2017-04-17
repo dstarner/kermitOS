@@ -35,6 +35,7 @@
 #include <addrspace.h>
 #include <vm.h>
 #include <proc.h>
+#include <array.h>
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -53,8 +54,11 @@ as_create(void)
 	}
 
    // Create the segments list
-	 as->segments_list = kmalloc(sizeof(struct linkedlist));
-	 as->segments_list->size = 0;
+	 as->segments_list = array_create();
+	 if (as->segments_list == NULL) {
+		 kfree(as);
+		 return NULL;
+	 }
 
 	return as;
 }
@@ -74,8 +78,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	 * Write this.
 	 */
 
-	// Copy memory from old addrspace to new addrspace
-	memcpy(newas, old, sizeof(struct addrspace));
+
 
 	// 1. Copy over the page table and segments table
 
@@ -84,39 +87,6 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	return 0;
 }
 
-void
-as_destroy(struct addrspace *as)
-{
-	/*
-	 * Clean up as needed.
-	 */
-
-	 // Start at the first node
-	 struct linkedlist_node * current = as->segments_list->head;
-
-	 while (current != NULL) {
-
-		 // Get the current node's segment
-		 struct segment_entry * segment = (struct segment_entry *) current->data;
-
-		 // Delete the page table. False because we are deleting page_entries
-		 delete_llist(segment->page_table, false);
-
-		 // Get the next one and delete the current.
-     struct linkedlist_node * next = current->next;
-     kfree(current);
-
-     // Set new current
-     current = next;
-
-	}
-
-  // Delete the segments list
-	kfree(as->segments_list);
-
-  // Delete the addres sspace
-	kfree(as);
-}
 
 void
 as_activate(void)
@@ -171,17 +141,43 @@ int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 		 int readable, int writeable, int executable)
 {
-	/*
-	 * Write this.
-	 */
 
-	(void)as;
-	(void)vaddr;
-	(void)memsize;
-	(void)readable;
-	(void)writeable;
-	(void)executable;
-	return ENOSYS;
+	// Check if there will be overlap
+	if (find_segment_from_vaddr(vaddr) != NULL) {
+		return EINVAL;
+	}
+
+	// Number of pages needed to be allocated
+	unsigned long num_vpages = memsize / PAGE_SIZE;
+
+  // Create the actual segment itself
+	struct segment_entry * segment = kmalloc(sizeof(struct segment_entry));
+
+  // Set the start and bounds for the segment
+  segment->region_start = vaddr;
+	segment->region_size = memsize;
+
+  // Set the permissions on this segment
+	if (readable < 1) segment->readable = true;
+	if (writable < 1) segment->writable = true;
+	if (executable < 1) segment->executable = true;
+
+  // Initialize the page table
+	segment->page_table = = array_create();
+	if (segment->page_table == NULL) {
+		kfree(as);
+		return NULL;
+	}
+
+  // Add it to the array
+	result = array_add(as->segments_list, (void *) segment, NULL);
+	if (result) {
+		segment_destroy(segment);
+		as_destroy(as);
+		return result;
+	}
+
+	return 0;
 }
 
 int
@@ -191,32 +187,79 @@ as_prepare_load(struct addrspace *as)
 	 * Write this.
 	 */
 
-	(void)as;
+  // Just make all my asserts
+	KASSERT(as != NULL && as == curproc->p_addrspace);
 	return 0;
 }
 
 int
 as_complete_load(struct addrspace *as)
 {
-	/*
-	 * Write this.
-	 */
+
+	KASSERT(as != NULL);
 
 	(void)as;
 	return 0;
 }
 
-int
-as_define_stack(struct addrspace *as, vaddr_t *stackptr)
+int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
-	/*
-	 * Write this.
-	 */
 
-	(void)as;
+  // Set up the stack
+	result = as_define_region(as, USERSTACKBASE, USERSTACKSIZE, 1, 1, 0);
+
+	// If something happens, lets return it
+ 	if (result) {
+ 		return result;
+ 	}
 
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;
 
 	return 0;
+}
+
+
+/* Destroy an address space and all its segments */
+void as_destroy(struct addrspace *as)
+{
+
+  struct segment_entry * segment;
+
+  // Iterate through each of the segments
+	for (i = 0; (unsigned)i < array_num(as->segments_list); i++) {
+
+		// Get the segment and then destroy it.
+		segment = (struct segment_entry *) array_get(as->segments_list, i);
+    segment_destroy(segment);
+
+	}
+
+  // Destroy the array
+	array_setsize(as->segments_list, 0);
+	array_destroy(as->segments_list);
+
+  // Delete the addres sspace
+	kfree(as);
+}
+
+
+/* Destroy a segment and its page table */
+void segment_destroy(struct segment_entry * segment) {
+
+	// Iterate over the page table and destroy each one
+	for (unsigned int i = 0; i < array_num(segment->page_table); i++) {
+
+		// Get each page and free it
+		struct page_entry * page = (struct page_entry *) array_get(segment->page_table, i);
+		kfree(page);
+	}
+
+	// Destroy the array
+	array_setsize(segment->page_table, 0);
+	array_destroy(segment->page_table);
+
+  // Free the segment
+	kfree(segment);
+
 }
