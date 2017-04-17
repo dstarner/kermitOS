@@ -116,8 +116,7 @@ as_activate(void)
  	splx(spl);
 }
 
-void
-as_deactivate(void)
+void as_deactivate(void)
 {
 	/*
 	 * Write this. For many designs it won't need to actually do
@@ -136,8 +135,7 @@ as_deactivate(void)
  * moment, these are ignored. When you write the VM system, you may
  * want to implement them.
  */
-int
-as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
+int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 		 int readable, int writeable, int executable)
 {
 
@@ -176,8 +174,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	return 0;
 }
 
-int
-as_prepare_load(struct addrspace *as)
+int as_prepare_load(struct addrspace *as)
 {
 	/*
 	 * Write this.
@@ -188,8 +185,7 @@ as_prepare_load(struct addrspace *as)
 	return 0;
 }
 
-int
-as_complete_load(struct addrspace *as)
+int as_complete_load(struct addrspace *as)
 {
 
 	KASSERT(as != NULL);
