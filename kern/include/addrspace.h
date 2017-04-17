@@ -67,7 +67,7 @@ struct segment_entry {
 
     // What type of segment is this?
     bool readable;
-    bool writable;
+    bool writeable;
     bool executable;
     bool isHeap;
 };
