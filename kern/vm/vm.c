@@ -384,8 +384,8 @@ void freeppage(paddr_t paddr) {
   KASSERT(coremap[page_num].state != FREE);
 
   // Free it
-  coremap[page_num + offset].state = FREE;
-  coremap[page_num + offset].block_size = 0;
+  coremap[page_num].state = FREE;
+  coremap[page_num].block_size = 0;
 
   // If booted, then be atomic
   if (vm_booted) {
