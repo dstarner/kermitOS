@@ -133,7 +133,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   }
 
   vaddr_t old_addr = faultaddress;
-  
+
   // First align the fault address to the starting address of the page
   faultaddress &= PAGE_FRAME;
 
@@ -150,7 +150,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
-  
+
 
   switch (faulttype) {
     case VM_FAULT_READ:
@@ -166,7 +166,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     case VM_FAULT_WRITE:
       // If no page, then create a new PTE and allocate a new physical page
       // dynamically.
-      if (page == NULL) {
+      if (page == NULL || page->writeable == 0) {
         // Allocate a new physical page
         paddr = getppages(1, false);
 
@@ -195,6 +195,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     // That means the physical address on the TLB is dirty.
     case VM_FAULT_READONLY:
       // I don't know what to do here, so I'll just do the default case...
+      
     default:
       return EINVAL;
   } // End of case switch
