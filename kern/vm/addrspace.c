@@ -185,6 +185,11 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
    int readable, int writeable, int executable)
 {
 
+  if (executable) {kprintf("CODE/TEXT: Executable, ");}
+  if (writeable) {kprintf("Writeable, ");}
+  if (readable) {kprintf("Readable, ");}
+  kprintf("%u --> %u\n", vaddr, memsize);
+
   // Check if there will be overlap
   if (find_segment_from_vaddr(vaddr) != NULL) {
   return EINVAL;
@@ -246,13 +251,14 @@ int as_complete_load(struct addrspace *as)
 int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
 
+  kprintf("STACK: ");
   // Set up the stack
   int result = as_define_region(as, USERSTACKBASE, USERSTACKSIZE, 1, 1, 0);
 
   // If something happens, lets return it
- 	if (result) {
- 		return result;
- 	}
+  if (result) {
+    return result;
+  }
 
   /* Initial user-level stack pointer */
   *stackptr = USERSTACK;
