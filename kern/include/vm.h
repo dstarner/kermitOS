@@ -78,6 +78,8 @@ struct page_entry * find_page_on_segment(struct segment_entry *, vaddr_t);
 
 /* Helper function to get 'n' number of physical pages */
 paddr_t getppages(unsigned long, bool);
+/* Free page */
+void freeppage(paddr_t);
 
 // Helper function to get physical address from virtual address.
 // paddr_t get_paddr_from_vaddr(vaddr_t vaddr);

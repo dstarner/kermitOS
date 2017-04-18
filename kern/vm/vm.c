@@ -372,6 +372,28 @@ vaddr_t alloc_kpages(unsigned npages) {
   return 0;
 }
 
+void freeppage(paddr_t paddr) {
+  unsigned long page_num = (paddr - coremap_pagestartaddr) / PAGE_SIZE;
+
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_acquire(&coremap_lock);
+  }
+
+  // Make sure that the page is actually allocated
+  KASSERT(coremap[page_num].state != FREE);
+
+  // Free it
+  coremap[page_num + offset].state = FREE;
+  coremap[page_num + offset].block_size = 0;
+
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_release(&coremap_lock);
+  }
+
+}
+
 
 void free_kpages(vaddr_t addr) {
   paddr_t raw_paddr = KVADDR_TO_PADDR(addr);
