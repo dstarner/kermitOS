@@ -146,6 +146,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) return EFAULT;
 
+  kprintf("VM Fault with perms E: %d, R: %d, W: %d.\n", seg->executable, seg->readable, seg->writeable);
+
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
 
@@ -171,6 +173,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
+      
+        array_add(seg->page_table, page, NULL);
 
       } else {
         // If it reaches here, that means the page is already available.
@@ -179,7 +183,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         paddr = page->ppage_n;
       }
 
-  	  break;
+
+      break;
 
     // A write was attempted on a read only page, which is an error.
     // That means the physical address on the TLB is dirty.
