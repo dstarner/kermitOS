@@ -61,7 +61,7 @@ void coremap_bootstrap() {
 
   // Keep trying to find the upper bound on pages
   while (addr_range > calculate_range(pages)) {
-  pages++;
+    pages++;
   }
 
   // We hit over with the 'while' loop, so we reduce
@@ -145,7 +145,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // If a segment is not found, that means the vaddr given is out of the bounds
   // of the allocated regions and should return an error.
   // TODO: Stack overflow vs heap out-of-bounds
-  if (seg == NULL) return EFAULT;
+  if (seg == NULL) { 
+    kprintf("\nFault at 0x%x\n\n", old_addr);
+    return EFAULT;
+  }
 
 
   // If fault address is valid, check if fault address is in Page Table
@@ -157,7 +160,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
-      if (page == NULL) return EFAULT;
+      if (page == NULL) { 
+        kprintf("\nFault at 0x%x\n\n", old_addr);
+        return EFAULT; 
+      }
 
       // Set the physical page to the page's ppage.
       paddr = page->ppage_n;
