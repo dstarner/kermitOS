@@ -271,7 +271,7 @@ int sys_execv(char *program, char **args, int *err) {
   as_destroy(addr);
   KASSERT(proc_getas() == NULL);
 
-  addr = as_create();
+  addr = as_create(true);
   if (addr == NULL) {
     kfree(name_copy);
     vfs_close(v);

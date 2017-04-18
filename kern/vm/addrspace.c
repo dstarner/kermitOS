@@ -45,8 +45,7 @@
  */
 
 struct addrspace *
-as_create(void)
-{
+as_create(bool createHeap) {
   struct addrspace *as;
 
   as = kmalloc(sizeof(struct addrspace));
@@ -59,6 +58,11 @@ as_create(void)
   if (as->segments_list == NULL) {
     kfree(as);
     return NULL;
+  }
+
+  // If we don't have to create a heap (used in as_copy)
+  if (!createHeap) {
+    return as;
   }
 
   // Create the heap region
@@ -81,7 +85,7 @@ as_create(void)
 
   heap_segment->page_table = array_create();
   if (heap_segment->page_table == NULL) {
-    as_destroy(as); 
+    as_destroy(as);
     return NULL;
   }
 
@@ -95,7 +99,7 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
 {
   struct addrspace *newas;
 
-  newas = as_create();
+  newas = as_create(false);
   if (newas==NULL) {
   return ENOMEM;
   }

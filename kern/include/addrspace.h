@@ -142,7 +142,7 @@ struct addrspace {
  * functions are found in dumbvm.c.
  */
 
-struct addrspace *as_create(void);
+struct addrspace *as_create(bool);
 int               as_copy(struct addrspace *src, struct addrspace **ret);
 void              as_activate(void);
 void              as_deactivate(void);
