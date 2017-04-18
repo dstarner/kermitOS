@@ -51,15 +51,27 @@ as_create(void)
 
   as = kmalloc(sizeof(struct addrspace));
   if (as == NULL) {
-  return NULL;
+    return NULL;
   }
 
         // Create the segments list
   as->segments_list = array_create();
   if (as->segments_list == NULL) {
     kfree(as);
-  return NULL;
+    return NULL;
   }
+
+  // Create the heap region
+  struct segment_entry * heap_segment = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
+  heap_segment->isHeap;
+
+  // The address the heap starts at
+  heap_segment->region_start = USERHEAPSTART;
+
+  // The size of the heap starts at zero and grows with sbrk
+  heap_segment->region_size = 0;
+
+  array_add(as->segments_list, heap_segment);
 
   return as;
 }
