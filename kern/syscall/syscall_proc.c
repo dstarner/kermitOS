@@ -30,11 +30,11 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 		return 0;
 	}
 
-	if(status == (int*) 0x0) {
+	if (status == (int*) 0x0) {
 		return 0;
 	}
 
-	if(status == (int*) 0x40000000 || status == (int*) 0x80000000 || ((int)status & 3) != 0) {
+	if (status == (int*) 0x40000000 || status == (int*) 0x80000000 || ((int)status & 3) != 0) {
 		*err = EFAULT;
 		return -1;
 	}
@@ -66,7 +66,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 		*err = ESRCH;
 		return -1;
 	}
-
 
 	lock_acquire(procs[pid]->e_lock);
 
@@ -101,7 +100,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 }
 
 void new_thread_start(void *tf, unsigned long addr) {
-
 	struct trapframe user_frame;
 	struct trapframe* new_tf = (struct trapframe*) tf;
 	struct addrspace* new_addr = (struct addrspace*) addr;
@@ -357,7 +355,6 @@ int sys_execv(char *program, char **args, int *err) {
 }
 
 void sys_exit(int exit_code, bool fatal_signal) {
-
   // Get the lock
   lock_acquire(curproc->e_lock);
 
@@ -373,7 +370,7 @@ void sys_exit(int exit_code, bool fatal_signal) {
 
   if (curproc->parent_pid < 0) {
     lock_release(curproc->e_lock);
-  
+
    // DESTROY IT ALL! (I'm tired and just want this shit to work)
    cv_destroy(curproc->e_cv);
    lock_destroy(curproc->e_lock);
@@ -410,4 +407,62 @@ void sys_exit(int exit_code, bool fatal_signal) {
   lock_release(curproc->e_lock);
   thread_exit();
 
+}
+
+/*
+ * On success, sbrk returns the previous value of the "break". On error,
+ * ((void *)-1) is returned, and errno is set according to the error
+ * encountered.
+ */
+vaddr_t sys_sbrk(intptr_t amt, int *err) {
+  KASSERT(curproc != NULL);
+
+  struct segment_entry * seg = find_heap_segment();
+  if (seg == NULL) {
+    *err = ENOMEM;
+    return 0;
+  }
+
+  // The call (like all system calls) should be atomic. In this case, that means
+  // that if you have a multithreaded process, simultaneous calls to sbrk from
+  // different threads should not interfere with each other and should update
+  // the "break" state atomically.
+  lock_acquire(curproc->sbrk_lock);
+
+  vaddr_t old_break = seg->region_start + seg->region_size;
+  if (amt == 0) return old_break;
+
+  // Only accept page aligned values for input.
+  if (amt % PAGE_SIZE != 0) {
+    *err = EINVAL;
+    return 0;
+  }
+
+  // While one can lower the "break" by passing negative values of amount, one
+  // may not set the end of the heap to an address lower than the beginning of
+  // the heap. Attempts to do so must be rejected.
+  if (amt < 0 && seg->region_size < ((unsigned int) amt) * PAGE_SIZE) {
+    *err = EINVAL;
+    return 0;
+  }
+
+  seg->region_size += amt;
+
+  lock_release(curproc->sbrk_lock);
+
+  return old_break;
+}
+
+struct segment_entry * find_heap_segment() {
+  KASSERT(curproc != NULL);
+
+  // Find the heap segment that is part of the segments list in the current proc
+  struct array * segs = curproc->p_addrspace->segments_list;
+  unsigned int i;
+  for (i = 0; i < array_num(segs); i++) {
+    struct segment_entry * seg = array_get(segs, i);
+    if (seg->isHeap) return seg;
+  }
+
+  return NULL;
 }
