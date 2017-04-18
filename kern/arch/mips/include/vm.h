@@ -88,6 +88,7 @@
  #define USERSTACKSIZE	(512*PAGE_SIZE)
  #define USERSTACKBASE	(USERSTACK-USERSTACKSIZE)
  #define USERSTACKREDZONE	65536
+ #define USERHEAPSTART 536870912
 
 /*
  * Interface to the low-level module that looks after the amount of

@@ -119,11 +119,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   int spl;
 
   if (curproc == NULL) {
-  	/*
-  	 * No process. This is probably a kernel fault early in boot. Return EFAULT
+    /*
+     * No process. This is probably a kernel fault early in boot. Return EFAULT
      * so as to panic instead of getting into an infinite faulting loop.
-  	 */
-  	return EFAULT;
+     */
+    return EFAULT;
   }
 
   as = proc_getas();
@@ -151,9 +151,13 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
   switch (faulttype) {
     case VM_FAULT_READ:
+
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
       if (page == NULL) return EFAULT;
+
+      // Set the physical page to the page's ppage.
+      paddr = page->ppage_n;
       break;
 
     case VM_FAULT_WRITE:
@@ -172,6 +176,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
 
+        array_add(seg->page_table, page, NULL);
+
       } else {
         // If it reaches here, that means the page is already available.
         // Just grab the physical address translation from the page and put
@@ -179,14 +185,15 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         paddr = page->ppage_n;
       }
 
-  	  break;
+
+      break;
 
     // A write was attempted on a read only page, which is an error.
     // That means the physical address on the TLB is dirty.
     case VM_FAULT_READONLY:
       // I don't know what to do here, so I'll just do the default case...
     default:
-  	  return EINVAL;
+      return EINVAL;
   } // End of case switch
 
   // At this point the paddr needs to exist or else it would not have gotten

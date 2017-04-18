@@ -51,15 +51,34 @@ as_create(void)
 
   as = kmalloc(sizeof(struct addrspace));
   if (as == NULL) {
-  return NULL;
+    return NULL;
   }
 
         // Create the segments list
   as->segments_list = array_create();
   if (as->segments_list == NULL) {
     kfree(as);
-  return NULL;
+    return NULL;
   }
+
+  // Create the heap region
+  struct segment_entry * heap_segment = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
+
+
+  heap_segment->isHeap = true;
+
+  // The address the heap starts at
+  heap_segment->region_start = USERHEAPSTART;
+
+  // The size of the heap starts at zero and grows with sbrk
+  heap_segment->region_size = 0;
+
+  // Set permissions
+  heap_segment->readable = 1;
+  heap_segment->writeable = 1;
+  heap_segment->executable = 0;
+
+  array_add(as->segments_list, heap_segment, NULL);
 
   return as;
 }
@@ -246,13 +265,14 @@ int as_complete_load(struct addrspace *as)
 int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
 
+  kprintf("STACK: ");
   // Set up the stack
   int result = as_define_region(as, USERSTACKBASE, USERSTACKSIZE, 1, 1, 0);
 
   // If something happens, lets return it
- 	if (result) {
- 		return result;
- 	}
+  if (result) {
+    return result;
+  }
 
   /* Initial user-level stack pointer */
   *stackptr = USERSTACK;
