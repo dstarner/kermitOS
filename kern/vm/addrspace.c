@@ -63,7 +63,10 @@ as_create(void)
 
   // Create the heap region
   struct segment_entry * heap_segment = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
-  heap_segment->isHeap;
+
+  kprintf("HEAP: 0x%x --> 0x%x\n", USERHEAPSTART, USERHEAPSTART + 0);
+
+  heap_segment->isHeap = true;
 
   // The address the heap starts at
   heap_segment->region_start = USERHEAPSTART;
@@ -75,7 +78,7 @@ as_create(void)
   heap_segment->readable = true;
   heap_segment->writeable = true;
 
-  array_add(as->segments_list, heap_segment);
+  array_add(as->segments_list, heap_segment, NULL);
 
   return as;
 }
@@ -204,7 +207,7 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
   if (executable) {kprintf("CODE/TEXT: Executable, ");}
   if (writeable) {kprintf("Writeable, ");}
   if (readable) {kprintf("Readable, ");}
-  kprintf("%u --> %u\n", vaddr, memsize);
+  kprintf("0x%x --> 0x%x\n", vaddr, vaddr + memsize);
 
   // Check if there will be overlap
   if (find_segment_from_vaddr(vaddr) != NULL) {
