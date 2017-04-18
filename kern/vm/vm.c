@@ -18,16 +18,16 @@ static struct spinlock coremap_lock = SPINLOCK_INITIALIZER;
 
 /* Helper for calculating number of pages. This does all the math computation */
 paddr_t calculate_range(unsigned int pages) {
-	// |-----------------l---l---------------------------------------------|
-	// | / / Coremap / / l---l ---l---l---l---l Pages l---l---l---l---l--- |
-	// |-----------------l---l---------------------------------------------|
-	//
-	// range = (n * SOCP + (PAGE_SIZE - (n * SOCP % PAGE_SIZE))) + (PAGE_SIZE * n)
-	// where
-	// n = number of pages
-	// SOCP = size of a single coremap_page struct (used for array length)
-	// PAGE_SIZE = 4K size of a single page
-	// range = size range of memory
+  // |-----------------l---l---------------------------------------------|
+  // | / / Coremap / / l---l ---l---l---l---l Pages l---l---l---l---l--- |
+  // |-----------------l---l---------------------------------------------|
+  //
+  // range = (n * SOCP + (PAGE_SIZE - (n * SOCP % PAGE_SIZE))) + (PAGE_SIZE * n)
+  // where
+  // n = number of pages
+  // SOCP = size of a single coremap_page struct (used for array length)
+  // PAGE_SIZE = 4K size of a single page
+  // range = size range of memory
 
   unsigned int pg = pages;
   paddr_t padding = PAGE_SIZE - ((pg * sizeof(struct coremap_page)) % PAGE_SIZE);
@@ -46,53 +46,53 @@ paddr_t calculate_range(unsigned int pages) {
  * will be
  */
 void coremap_bootstrap() {
-	// Physical memory address
+  // Physical memory address
         // Get the first and last free address to manage
-	paddr_t last_address = ram_getsize();
-	paddr_t first_address = ram_getfirstfree();
+  paddr_t last_address = ram_getsize();
+  paddr_t first_address = ram_getfirstfree();
 
-	// The range for the coremap
-	paddr_t addr_range = last_address - first_address;
+  // The range for the coremap
+  paddr_t addr_range = last_address - first_address;
 
-	//         pages          coremap
-	//  mem     coremap     -------------- pad coremap to 4K --    physical pages
-	// range = (n * SOCP + (PAGE_SIZE - (n * SOCP % PAGE_SIZE))) + (PAGE_SIZE * n)
-	unsigned int pages = 1;
+  //         pages          coremap
+  //  mem     coremap     -------------- pad coremap to 4K --    physical pages
+  // range = (n * SOCP + (PAGE_SIZE - (n * SOCP % PAGE_SIZE))) + (PAGE_SIZE * n)
+  unsigned int pages = 1;
 
-	// Keep trying to find the upper bound on pages
-	while (addr_range > calculate_range(pages)) {
-		pages++;
-	}
+  // Keep trying to find the upper bound on pages
+  while (addr_range > calculate_range(pages)) {
+  pages++;
+  }
 
-	// We hit over with the 'while' loop, so we reduce
-	// by one to bring back into acceptable memory range
-	pages--;
-	KASSERT(pages != 0);
+  // We hit over with the 'while' loop, so we reduce
+  // by one to bring back into acceptable memory range
+  pages--;
+  KASSERT(pages != 0);
 
-	kprintf("Number of Pages Allocated: %d\n", pages);
+  kprintf("Number of Pages Allocated: %d\n", pages);
 
-	// How many pages we have (for iteration and shit).
-	COREMAP_PAGES = pages;
+  // How many pages we have (for iteration and shit).
+  COREMAP_PAGES = pages;
 
-	// Set the coremap to start at the starting address
-	coremap_startaddr = first_address;
-	coremap = (void*) PADDR_TO_KVADDR(coremap_startaddr);
+  // Set the coremap to start at the starting address
+  coremap_startaddr = first_address;
+  coremap = (void*) PADDR_TO_KVADDR(coremap_startaddr);
 
-	// We will initialize the current page
-	// to be the first page
-	current_page = 0;
+  // We will initialize the current page
+  // to be the first page
+  current_page = 0;
 
-	// The starting address for the physical pages
-	paddr_t padding = PAGE_SIZE - ((pages * sizeof(struct coremap_page)) % PAGE_SIZE);
-	coremap_pagestartaddr = first_address + (pages * sizeof(struct coremap_page) + padding);
+  // The starting address for the physical pages
+  paddr_t padding = PAGE_SIZE - ((pages * sizeof(struct coremap_page)) % PAGE_SIZE);
+  coremap_pagestartaddr = first_address + (pages * sizeof(struct coremap_page) + padding);
 
-	// Initialize the coremap with everything being unitialized
-	for (unsigned int i=0; i<COREMAP_PAGES; i++) {
-	  coremap[i].state = FREE;
+  // Initialize the coremap with everything being unitialized
+  for (unsigned int i=0; i<COREMAP_PAGES; i++) {
+    coremap[i].state = FREE;
     coremap[i].block_size = 0;
-	}
+  }
 
-	vm_booted = false;
+  vm_booted = false;
 
 }
 
@@ -100,11 +100,11 @@ void coremap_bootstrap() {
 /* Initialization function */
 void vm_bootstrap() {
 
-	// Initialize above here
-	vm_booted = true;
+  // Initialize above here
+  vm_booted = true;
 
-	// Make sure we really booted
-	KASSERT(vm_booted); // wot
+  // Make sure we really booted
+  KASSERT(vm_booted); // wot
 }
 
 /* Fault handling function called by trap code */
@@ -115,8 +115,8 @@ void vm_bootstrap() {
 int vm_fault(int faulttype, vaddr_t faultaddress) {
   // Declare these variables for use later.
   paddr_t paddr = 0;
-	struct addrspace *as;
-	int spl;
+  struct addrspace *as;
+  int spl;
 
   if (curproc == NULL) {
   	/*
@@ -135,7 +135,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   }
 
   // First align the fault address to the starting address of the page
-	faultaddress &= PAGE_FRAME;
+  faultaddress &= PAGE_FRAME;
 
   // Try to find the physical address translation first.
   // If the page isn't found, then it will become 0.
@@ -197,28 +197,28 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // I believe this part attempts to find an available TLB page entry and caches
   // it to the TLB.
   /* Disable interrupts on this CPU while frobbing the TLB. */
-	spl = splhigh();
+  spl = splhigh();
   uint32_t ehi, elo;
   int i;
 
-	for (i=0; i<NUM_TLB; i++) {
-		tlb_read(&ehi, &elo, i);
-		if (elo & TLBLO_VALID) {
-			continue;
-		}
-		ehi = faultaddress;
-		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-		DEBUG(DB_VM, "primevm: 0x%x -> 0x%x\n", faultaddress, paddr);
-		tlb_write(ehi, elo, i);
-		splx(spl);
-		return 0;
-	}
+  for (i=0; i<NUM_TLB; i++) {
+  tlb_read(&ehi, &elo, i);
+  if (elo & TLBLO_VALID) {
+  continue;
+  }
+  ehi = faultaddress;
+  elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+  DEBUG(DB_VM, "primevm: 0x%x -> 0x%x\n", faultaddress, paddr);
+  tlb_write(ehi, elo, i);
+  splx(spl);
+  return 0;
+  }
 
   // The problem with this right now is that it doesn't know how to evict entries
   // from the TLB if there aren't any invalid TLB entries and returns errors.
-	kprintf("primevm: Ran out of TLB entries - cannot handle page fault\n");
-	splx(spl);
-	return EFAULT;
+  kprintf("primevm: Ran out of TLB entries - cannot handle page fault\n");
+  splx(spl);
+  return EFAULT;
 }
 
 /*
@@ -227,10 +227,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
  */
 struct segment_entry * find_segment_from_vaddr(vaddr_t vaddr) {
   // Make sure the process exists as we need to grab information from it.
-  KASSERT(curproc != NULL);
+  struct addrspace * as = proc_getas();
+  KASSERT(as != NULL);
 
   // Iterate the array to find if there is a match.
-  struct array * segs = curproc->p_addrspace->segments_list;
+  struct array * segs = as->segments_list;
   unsigned int i;
   for (i = 0; i < array_num(segs); i++) {
     struct segment_entry * seg = array_get(segs, i);
@@ -268,13 +269,13 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
 void
 as_zero_region(paddr_t paddr, unsigned npages)
 {
-	bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
+  bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
 }
 
 
 paddr_t getppages(unsigned long npages, bool isKernel) {
-	// Cycle through the pages, try to get space raw
-	// Could not get enough mem, time to swap!
+  // Cycle through the pages, try to get space raw
+  // Could not get enough mem, time to swap!
 
   unsigned long count = 0;
 
