@@ -69,9 +69,9 @@ struct segment_entry {
     struct array * page_table;
 
     // What type of segment is this?
-    bool readable;
-    bool writeable;
-    bool executable;
+    int readable;
+    int writeable;
+    int executable;
     bool isHeap;
 };
 

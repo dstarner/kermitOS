@@ -198,9 +198,9 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
   segment->region_size = memsize;
 
   // Set the permissions on this segment
-  if (readable < 1) segment->readable = true;
-  if (writeable < 1) segment->writeable = true;
-  if (executable < 1) segment->executable = true;
+  segment->readable = readable;
+  segment->writeable = writeable;
+  segment->executable = executable;
 
   // Initialize the page table
   segment->page_table = array_create();
