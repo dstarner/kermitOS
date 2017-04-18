@@ -74,7 +74,7 @@ void vm_bootstrap(void);
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
 struct segment_entry * find_segment_from_vaddr(vaddr_t);
-struct page_entry * find_page_on_segment(struct segment_entry *);
+struct page_entry * find_page_on_segment(struct segment_entry *, vaddr_t);
 
 /* Helper function to get 'n' number of physical pages */
 paddr_t getppages(unsigned long, bool);
@@ -83,7 +83,7 @@ paddr_t getppages(unsigned long, bool);
 // paddr_t get_paddr_from_vaddr(vaddr_t vaddr);
 
 // Helper function to remove data from a page.
-void zero_out_page(unsigned long pagesum);
+void as_zero_region(paddr_t paddr, unsigned npages);
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);

@@ -9,6 +9,7 @@
 #include <mips/tlb.h>
 #include <addrspace.h>
 #include <vm.h>
+#include <array.h>
 
 /*
  * Wrap ram_stealmem in a spinlock.
@@ -88,7 +89,7 @@ void coremap_bootstrap() {
 	// Initialize the coremap with everything being unitialized
 	for (unsigned int i=0; i<COREMAP_PAGES; i++) {
 	  coremap[i].state = FREE;
-          coremap[i].block_size = 0;
+    coremap[i].block_size = 0;
 	}
 
 	vm_booted = false;
@@ -113,7 +114,7 @@ void vm_bootstrap() {
  */
 int vm_fault(int faulttype, vaddr_t faultaddress) {
   // Declare these variables for use later.
-  paddr_t paddr;
+  paddr_t paddr = 0;
 	struct addrspace *as;
 	int spl;
 
@@ -146,7 +147,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   if (seg == NULL) return EFAULT;
 
   // If fault address is valid, check if fault address is in Page Table
-  struct page_entry * page = find_page_on_segment(seg);
+  struct page_entry * page = find_page_on_segment(seg, faultaddress);
 
   switch (faulttype) {
     case VM_FAULT_READ:
@@ -164,7 +165,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
         // Create a new page entry to reference the physical page that was
         // just requested.
-        page = kmalloc(sizeof(struct page_entry));
+        page = (struct page_entry *) kmalloc(sizeof(struct page_entry));
 
         // Set the values of the new page created.
         page->ppage_n = paddr;
@@ -187,6 +188,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     default:
   	  return EINVAL;
   } // End of case switch
+
+  // At this point the paddr needs to exist or else it would not have gotten
+  // this far.
+
+  KASSERT(paddr != 0);
 
   // I believe this part attempts to find an available TLB page entry and caches
   // it to the TLB.
@@ -219,19 +225,46 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
  * Find a page entry on the provided segment. If it doesn't exist, it returns
  * NULL.
  */
-struct segment * find_segment_from_vaddr(vaddr_t vaddr) {
+struct segment_entry * find_segment_from_vaddr(vaddr_t vaddr) {
+  // Make sure the process exists as we need to grab information from it.
+  KASSERT(curproc != NULL);
+
+  // Iterate the array to find if there is a match.
+  struct array * segs = curproc->p_addrspace->segments_list;
+  unsigned int i;
+  for (i = 0; i < array_num(segs); i++) {
+    struct segment_entry * seg = array_get(segs, i);
+    if (seg->region_start <= vaddr &&
+        seg->region_start + seg->region_size > vaddr) {
+      return seg;
+    }
+  }
+
   return NULL;
 }
 
 /*
- * Find a page entry on the provided segment. If it doesn't exist, it returns
- * NULL.
+ * Find a page entry on the provided segment that contains the vaddr.
+ * If it doesn't exist, it returns NULL.
  */
-struct page_entry * find_page_on_segment(segment_entry * segment) {
+struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vaddr) {
+  // Make sure the process exists as we need to grab information from it.
+  KASSERT(curproc != NULL);
+  KASSERT(seg != NULL);
+
+  // Iterate the array to find if there is a match.
+  struct array * pages = seg->page_table;
+  unsigned int i;
+  for (i = 0; i < array_num(pages); i++) {
+    struct page_entry * page = array_get(pages, i);
+    if (((vaddr_t) (page->vpage_n)) == vaddr) {
+      return page;
+    }
+  }
+
   return NULL;
 }
 
-static
 void
 as_zero_region(paddr_t paddr, unsigned npages)
 {
@@ -277,7 +310,7 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
         coremap[page_num + j].block_size = 0;
 
         // Clear out the page
-        as_zero_region(page_num);
+        as_zero_region(page_num, 1);
       }
 
       // Remember to set the block_size for the first page
