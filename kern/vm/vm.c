@@ -69,8 +69,6 @@ void coremap_bootstrap() {
   pages--;
   KASSERT(pages != 0);
 
-  kprintf("Number of Pages Allocated: %d\n", pages);
-
   // How many pages we have (for iteration and shit).
   COREMAP_PAGES = pages;
 
@@ -146,6 +144,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) return EFAULT;
 
+  // kprintf("VM Fault with perms E: %d, R: %d, W: %d at vaddr %x\n", seg->executable, seg->readable, seg->writeable, faultaddress);
+
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
 
@@ -220,9 +220,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     return 0;
   }
 
+  // If the TLB is full, pick a random to evict
   ehi = faultaddress;
   elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
   tlb_random(ehi, elo);
+
   splx(spl);
   return EFAULT;
 }
@@ -357,69 +359,6 @@ vaddr_t alloc_kpages(unsigned npages) {
   return 0;
 }
 
-// paddr_t get_paddr_from_vaddr(vaddr_t vaddr) {
-//   uint32_t vaddr_vpn = vaddr >> 20; // Get virtual page from virtual address by getting top 20 bits.
-//   uint32_t vaddr_offset = vaddr & 0xFFF; // Get offset of the virtual address; 0xFFF is 12 bits (1111 1111 1111)
-//
-//   // Find physical page on TLB
-//   uint32_t ehi, elo; // According to tlb.h ENTRYLO is not used but still needs to be set.
-//   ehi = vaddr_vpn;
-//
-//   // Find a matching TLB entry.
-//   int tlb_index = tlb_probe(ehi, elo);
-//
-//   // tlb_probe returns -1 if it cannot find an index and the page table need to
-//   // be
-//   if (tlb_index < 0) {
-//     // We need to find the physical address if the TLB cannot find a match.
-//
-//     for (unsigned long i = 0; i < COREMAP_PAGES; ++i) {
-//       // If we found the page with the same virtual page number, then that means
-//       // The index is the correct physical page on the coremap, and we need to
-//       // convert the virtual address to the physical one.
-//       if (coremap[i].virtual_page_num == vaddr_vpn) {
-//         // Find the starting point of the physical page address.
-//         uint32_t ppage_num = coremap_pagestartaddr + (i * PAGE_SIZE);
-//
-//         // Build the physical address by concatenting the two chunks together.
-//         paddr_t paddr = (ppage_num << 20) + vaddr_offset;
-//
-//         // TODO: Write to TLB for caching.
-//         return paddr;
-//       }
-//     }
-//
-//     // If the program has not returned yet, then the virtual address provided does not
-//     // have an associated page.
-//     kprintf("Kernel cannot find physical address");
-//     return 0;
-//   }
-//
-//   // At this point we can assume we found a match, and we need to read the TLB for the address.
-//   // I'm going to assume tlb_probe is more efficient in finding matches than manually doing it.
-//   tlb_read(&ehi, &elo, tlb_index); // elo will now contain the physical addr
-//
-//   // Build the physical address by concatenting the two chunks together.
-//   paddr_t paddr = (elo << 20) + vaddr_offset;
-//   return paddr;
-// }
-
-// void free_kpages(vaddr_t vaddr) {
-  // paddr_t paddr = get_paddr_from_vaddr(vaddr);
-  //
-  // // If this returns 0 then that means it is not a valid virtual address.
-  // // Virtual addresses shouldn't be valid at 0 anyways.
-  // if (paddr == 0) {
-  //   // TODO: Error catching?
-  //   return;
-  // }
-  //
-  // // At this point we found a physical address, and we can proceed to free the pages.
-  // // Identify the physical page on the coremap array
-  // unsigned ppage_coremap_index = (paddr - coremap_pagestartaddr) % PAGE_SIZE;
-  //
-  // // Determine that the page is no longer allocated.
-  // coremap[ppage_coremap_index].allocated = false;
 
 void free_kpages(vaddr_t addr) {
   paddr_t raw_paddr = KVADDR_TO_PADDR(addr);
