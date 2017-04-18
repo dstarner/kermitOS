@@ -310,7 +310,7 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
         coremap[page_num + j].block_size = 0;
 
         // Clear out the page
-        as_zero_region(page_num, 1);
+        as_zero_region(((page_num + j) * PAGE_SIZE) + coremap_pagestartaddr, 1);
       }
 
       // Remember to set the block_size for the first page
