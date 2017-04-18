@@ -209,21 +209,20 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   int i;
 
   for (i=0; i<NUM_TLB; i++) {
-  tlb_read(&ehi, &elo, i);
-  if (elo & TLBLO_VALID) {
-  continue;
-  }
-  ehi = faultaddress;
-  elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-  DEBUG(DB_VM, "primevm: 0x%x -> 0x%x\n", faultaddress, paddr);
-  tlb_write(ehi, elo, i);
-  splx(spl);
-  return 0;
+    tlb_read(&ehi, &elo, i);
+    if (elo & TLBLO_VALID) {
+      continue;
+    }
+    ehi = faultaddress;
+    elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+    tlb_write(ehi, elo, i);
+    splx(spl);
+    return 0;
   }
 
-  // The problem with this right now is that it doesn't know how to evict entries
-  // from the TLB if there aren't any invalid TLB entries and returns errors.
-  kprintf("primevm: Ran out of TLB entries - cannot handle page fault\n");
+  ehi = faultaddress;
+  elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+  tlb_random(ehi, elo);
   splx(spl);
   return EFAULT;
 }
