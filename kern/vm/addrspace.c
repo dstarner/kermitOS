@@ -108,7 +108,7 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
   newas->segments_list = array_create();
   if (newas->segments_list == NULL) {
     kfree(newas);
-  return ENOMEM;
+    return ENOMEM;
   }
 
   struct segment_entry * old_seg;
@@ -140,6 +140,12 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
     kprintf("0x%x --> 0x%x\n", new_seg->region_start, new_seg->region_start + new_seg->region_size);
 
     unsigned int pt_size = array_num(old_seg->page_table);
+    new_seg->page_table = array_create();
+    if (new_seg->page_table == NULL) {
+      as_destroy(newas);
+      return ENOMEM;
+    }
+
 
     // Copy the page table
     for (unsigned int j=0; j < pt_size; j++) {
