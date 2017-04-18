@@ -71,6 +71,10 @@ as_create(void)
   // The size of the heap starts at zero and grows with sbrk
   heap_segment->region_size = 0;
 
+  // Set permissions
+  heap_segment->readable = true;
+  heap_segment->writeable = true;
+
   array_add(as->segments_list, heap_segment);
 
   return as;
