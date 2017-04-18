@@ -168,6 +168,8 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
       array_add(new_seg->page_table, new_page, NULL);
     }
 
+    array_add(newas->segments_list, new_seg, NULL);
+
   }
 
   *ret = newas;
