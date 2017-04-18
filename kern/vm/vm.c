@@ -132,22 +132,25 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     return EFAULT;
   }
 
+  vaddr_t old_addr = faultaddress;
+  
   // First align the fault address to the starting address of the page
   faultaddress &= PAGE_FRAME;
 
+
   // Try to find the physical address translation first.
   // If the page isn't found, then it will become 0.
-  struct segment_entry * seg = find_segment_from_vaddr(faultaddress);
+  struct segment_entry * seg = find_segment_from_vaddr(old_addr);
 
   // If a segment is not found, that means the vaddr given is out of the bounds
   // of the allocated regions and should return an error.
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) return EFAULT;
 
-  // kprintf("VM Fault with perms E: %d, R: %d, W: %d at vaddr %x\n", seg->executable, seg->readable, seg->writeable, faultaddress);
 
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
+  
 
   switch (faulttype) {
     case VM_FAULT_READ:
