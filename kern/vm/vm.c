@@ -156,6 +156,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
       if (page == NULL) return EFAULT;
+      paddr = page->ppage_n;
       break;
 
     case VM_FAULT_WRITE:
