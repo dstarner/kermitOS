@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -172,14 +172,14 @@ as_activate(void)
   }
 
    /* Disable interrupts on this CPU while frobbing the TLB. */
- 	int spl = splhigh();
+   int spl = splhigh();
 
         /* Invalidate everything in the TLB */
- 	for (unsigned int i=0; i<NUM_TLB; i++) {
- 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
- 	}
+   for (unsigned int i=0; i<NUM_TLB; i++) {
+     tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+   }
 
- 	splx(spl);
+   splx(spl);
 }
 
 void as_deactivate(void)
@@ -205,14 +205,9 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
    int readable, int writeable, int executable)
 {
 
-  if (executable) {kprintf("CODE/TEXT: Executable, ");}
-  if (writeable) {kprintf("Writeable, ");}
-  if (readable) {kprintf("Readable, ");}
-  kprintf("0x%x --> 0x%x\n", vaddr, vaddr + memsize);
-
   // Check if there will be overlap
   if (find_segment_from_vaddr(vaddr) != NULL) {
-  return EINVAL;
+    return EINVAL;
   }
 
   // Create the actual segment itself
