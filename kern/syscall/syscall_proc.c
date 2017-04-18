@@ -430,10 +430,14 @@ void * sys_sbrk(intptr_t amt, int *err) {
   lock_acquire(curproc->sbrk_lock);
 
   vaddr_t old_break = seg->region_start + seg->region_size;
-  if (amt == 0) return ((void *) old_break);
+  if (amt == 0) {
+    lock_release(curproc->sbrk_lock);
+    return ((void *) old_break);
+  }
 
   // Only accept page aligned values for input.
   if (amt % PAGE_SIZE != 0) {
+    lock_release(curproc->sbrk_lock);
     *err = EINVAL;
     return ((void *)-1);
   }
@@ -442,8 +446,9 @@ void * sys_sbrk(intptr_t amt, int *err) {
   // may not set the end of the heap to an address lower than the beginning of
   // the heap. Attempts to do so must be rejected.
   if (amt < 0 && seg->region_size < ((unsigned int) amt) * PAGE_SIZE) {
+    lock_release(curproc->sbrk_lock);
     *err = EINVAL;
-    return ((void *)-1) ;
+    return ((void *) -1) ;
   }
 
   seg->region_size += amt;
@@ -454,7 +459,6 @@ void * sys_sbrk(intptr_t amt, int *err) {
   }
 
   lock_release(curproc->sbrk_lock);
-
   return ((void *) old_break);
 }
 
