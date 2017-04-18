@@ -64,8 +64,6 @@ as_create(void)
   // Create the heap region
   struct segment_entry * heap_segment = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
 
-  kprintf("HEAP: 0x%x --> 0x%x\n", USERHEAPSTART, USERHEAPSTART + 0);
-
   heap_segment->isHeap = true;
 
   // The address the heap starts at
@@ -78,6 +76,12 @@ as_create(void)
   heap_segment->readable = 1;
   heap_segment->writeable = 1;
   heap_segment->executable = 0;
+
+  heap_segment->page_table = array_create();
+  if (heap_segment->page_table == NULL) {
+    as_destroy(as); 
+    return NULL;
+  }
 
   array_add(as->segments_list, heap_segment, NULL);
 
@@ -308,6 +312,12 @@ void as_destroy(struct addrspace *as)
 
 /* Destroy a segment and its page table */
 void segment_destroy(struct segment_entry * segment) {
+
+  KASSERT(segment != NULL);
+  if (segment->page_table == NULL) {
+    kfree(segment);
+    return;
+  }
 
   // Iterate over the page table and destroy each one
   for (unsigned int i = 0; i < array_num(segment->page_table); i++) {

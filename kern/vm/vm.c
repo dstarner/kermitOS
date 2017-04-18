@@ -69,8 +69,6 @@ void coremap_bootstrap() {
   pages--;
   KASSERT(pages != 0);
 
-  kprintf("Number of Pages Allocated: %d\n", pages);
-
   // How many pages we have (for iteration and shit).
   COREMAP_PAGES = pages;
 
