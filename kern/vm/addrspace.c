@@ -164,6 +164,8 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
       // TODO:
       memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
              (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
+
+      array_add(new_seg->page_table, new_page);
     }
 
   }
