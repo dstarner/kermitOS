@@ -119,11 +119,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   int spl;
 
   if (curproc == NULL) {
-  	/*
-  	 * No process. This is probably a kernel fault early in boot. Return EFAULT
+    /*
+     * No process. This is probably a kernel fault early in boot. Return EFAULT
      * so as to panic instead of getting into an infinite faulting loop.
-  	 */
-  	return EFAULT;
+     */
+    return EFAULT;
   }
 
   as = proc_getas();
@@ -146,7 +146,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) return EFAULT;
 
-  kprintf("VM Fault with perms E: %d, R: %d, W: %d.\n", seg->executable, seg->readable, seg->writeable);
+  kprintf("VM Fault with perms E: %d, R: %d, W: %d at vaddr %lx\n", seg->executable, seg->readable, seg->writeable, faultaddress);
 
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
@@ -173,7 +173,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
-      
+
         array_add(seg->page_table, page, NULL);
 
       } else {
@@ -191,7 +191,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     case VM_FAULT_READONLY:
       // I don't know what to do here, so I'll just do the default case...
     default:
-  	  return EINVAL;
+      return EINVAL;
   } // End of case switch
 
   // At this point the paddr needs to exist or else it would not have gotten
