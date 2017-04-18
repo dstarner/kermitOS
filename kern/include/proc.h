@@ -85,6 +85,9 @@ struct proc {
 	struct cv *e_cv;
 	bool can_exit;
 	int exit_code;
+
+  // Used for sbrk
+  struct lock *sbrk_lock;
 };
 
 /* Array of all of the processes */

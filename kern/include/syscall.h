@@ -32,6 +32,7 @@
 
 
 #include <cdefs.h> /* for __DEAD */
+#include <addrspace.h>
 struct trapframe; /* from <machine/trapframe.h> */
 
 struct f_handler {
@@ -161,5 +162,8 @@ int sys_fork(struct trapframe*, int*);
 void new_thread_start(void *, unsigned long);
 
 int sys_execv(char *, char **, int *);
+
+vaddr_t sys_sbrk(intptr_t, int *);
+struct segment_entry * find_heap_segment();
 
 #endif /* _SYSCALL_H_ */
