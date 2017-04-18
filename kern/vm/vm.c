@@ -148,7 +148,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // If a segment is not found, that means the vaddr given is out of the bounds
   // of the allocated regions and should return an error.
   // TODO: Stack overflow vs heap out-of-bounds
-  if (seg == NULL) { 
+  if (seg == NULL) {
     kprintf("\nFault at 0x%x\n\n", old_addr);
     return EFAULT;
   }
@@ -163,9 +163,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
-      if (page == NULL) { 
+      if (page == NULL) {
         kprintf("\nFault at 0x%x\n\n", old_addr);
-        return EFAULT; 
+        return EFAULT;
       }
 
       // Set the physical page to the page's ppage.
@@ -175,7 +175,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     case VM_FAULT_WRITE:
       // If no page, then create a new PTE and allocate a new physical page
       // dynamically.
-      if (page == NULL || seg->writeable == 0) {
+      if (page == NULL) {
         // Allocate a new physical page
         paddr = getppages(1, false);
 
@@ -204,7 +204,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     // That means the physical address on the TLB is dirty.
     case VM_FAULT_READONLY:
       // I don't know what to do here, so I'll just do the default case...
-      
+
     default:
       return EINVAL;
   } // End of case switch
