@@ -239,7 +239,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   tlb_random(ehi, elo);
 
   splx(spl);
-  return EFAULT;
+  return 0;
 }
 
 /*
