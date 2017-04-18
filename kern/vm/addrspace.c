@@ -352,7 +352,7 @@ void segment_destroy(struct segment_entry * segment) {
     struct page_entry * page = (struct page_entry *) array_get(segment->page_table, i);
 
     // Free the page, and then free the actual structure
-    freeppage(page_entry->ppage_n);
+    freeppage(page->ppage_n);
     kfree(page);
   }
 
