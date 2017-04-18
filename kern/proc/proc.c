@@ -99,7 +99,7 @@ proc_create(const char *name) {
 		kfree(proc);
 		return NULL;
 	}
-	
+
 	proc->e_cv = cv_create("Process CV");
 	if (proc->e_cv == NULL) {
 		lock_destroy(proc->e_lock);
@@ -110,6 +110,16 @@ proc_create(const char *name) {
 
 	proc->can_exit = false;
         proc->parent_pid = -1;
+
+    // Lock and exit stuff
+  proc->sbrk_lock = lock_create("Process sbrk lock");
+  if (proc->sbrk_lock == NULL) {
+		lock_destroy(proc->e_lock);
+		lock_destroy(proc->e_cv);
+    kfree(proc->p_name);
+    kfree(proc);
+    return NULL;
+  }
 
 	// Get a process ID
 	for (int i=0; i < 128; i++) {
