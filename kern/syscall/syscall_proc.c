@@ -414,13 +414,13 @@ void sys_exit(int exit_code, bool fatal_signal) {
  * ((void *)-1) is returned, and errno is set according to the error
  * encountered.
  */
-vaddr_t sys_sbrk(intptr_t amt, int *err) {
+void * sys_sbrk(intptr_t amt, int *err) {
   KASSERT(curproc != NULL);
 
   struct segment_entry * seg = find_heap_segment();
   if (seg == NULL) {
     *err = ENOMEM;
-    return 0;
+    return ((void *)-1) ;
   }
 
   // The call (like all system calls) should be atomic. In this case, that means
@@ -430,12 +430,12 @@ vaddr_t sys_sbrk(intptr_t amt, int *err) {
   lock_acquire(curproc->sbrk_lock);
 
   vaddr_t old_break = seg->region_start + seg->region_size;
-  if (amt == 0) return old_break;
+  if (amt == 0) return ((void *) old_break);
 
   // Only accept page aligned values for input.
   if (amt % PAGE_SIZE != 0) {
     *err = EINVAL;
-    return 0;
+    return ((void *)-1);
   }
 
   // While one can lower the "break" by passing negative values of amount, one
@@ -443,14 +443,19 @@ vaddr_t sys_sbrk(intptr_t amt, int *err) {
   // the heap. Attempts to do so must be rejected.
   if (amt < 0 && seg->region_size < ((unsigned int) amt) * PAGE_SIZE) {
     *err = EINVAL;
-    return 0;
+    return ((void *)-1) ;
   }
 
   seg->region_size += amt;
 
+  // Zero out bytes if we're allocating new space to the process.
+  if (amt > 0) {
+  	bzero((void *) PADDR_TO_KVADDR(old_break), amt * PAGE_SIZE);
+  }
+
   lock_release(curproc->sbrk_lock);
 
-  return old_break;
+  return ((void *) old_break);
 }
 
 struct segment_entry * find_heap_segment() {
