@@ -75,8 +75,9 @@ as_create(void)
   heap_segment->region_size = 0;
 
   // Set permissions
-  heap_segment->readable = true;
-  heap_segment->writeable = true;
+  heap_segment->readable = 1;
+  heap_segment->writeable = 1;
+  heap_segment->executable = 0;
 
   array_add(as->segments_list, heap_segment, NULL);
 
