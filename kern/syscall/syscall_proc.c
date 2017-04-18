@@ -453,11 +453,6 @@ void * sys_sbrk(intptr_t amt, int *err) {
 
   seg->region_size += amt;
 
-  // Zero out bytes if we're allocating new space to the process.
-  if (amt > 0) {
-  	bzero((void *) PADDR_TO_KVADDR(old_break), amt * PAGE_SIZE);
-  }
-
   lock_release(curproc->sbrk_lock);
   return ((void *) old_break);
 }
