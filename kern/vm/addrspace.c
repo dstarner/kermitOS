@@ -47,111 +47,111 @@
 struct addrspace *
 as_create(void)
 {
-	struct addrspace *as;
+  struct addrspace *as;
 
-	as = kmalloc(sizeof(struct addrspace));
-	if (as == NULL) {
-		return NULL;
-	}
+  as = kmalloc(sizeof(struct addrspace));
+  if (as == NULL) {
+  return NULL;
+  }
 
         // Create the segments list
-	as->segments_list = array_create();
-	if (as->segments_list == NULL) {
-	  kfree(as);
-		return NULL;
-	}
+  as->segments_list = array_create();
+  if (as->segments_list == NULL) {
+    kfree(as);
+  return NULL;
+  }
 
-	return as;
+  return as;
 }
 
 
 int as_copy(struct addrspace *old, struct addrspace **ret)
 {
-	struct addrspace *newas;
+  struct addrspace *newas;
 
-	newas = as_create();
-	if (newas==NULL) {
-		return ENOMEM;
-	}
+  newas = as_create();
+  if (newas==NULL) {
+  return ENOMEM;
+  }
 
-	// Create the new array
-	newas->segments_list = array_create();
-	if (newas->segments_list == NULL) {
-	  kfree(newas);
-		return ENOMEM;
-	}
+  // Create the new array
+  newas->segments_list = array_create();
+  if (newas->segments_list == NULL) {
+    kfree(newas);
+  return ENOMEM;
+  }
 
-        struct segment_entry * old_seg;
-        struct segment_entry * new_seg;
-	struct page_entry * old_page;
-        struct page_entry * new_page;
-        unsigned int size = array_num(old->segments_list);
+  struct segment_entry * old_seg;
+  struct segment_entry * new_seg;
+  struct page_entry * old_page;
+  struct page_entry * new_page;
+  unsigned int size = array_num(old->segments_list);
 
         // Go through and copy segments
-	for (unsigned int i=0; i < size; i++) {
+  for (unsigned int i=0; i < size; i++) {
 
-		// Get the old segment
-		old_seg = (struct segment_entry *) array_get(old->segments_list, i);
+    // Get the old segment
+    old_seg = (struct segment_entry *) array_get(old->segments_list, i);
 
-		// Create the new segment
-		new_seg = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
+    // Create the new segment
+    new_seg = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
 
     // Copy start and size and permissions
-		new_seg->region_start = old_seg->region_start;
-		new_seg->region_size = old_seg->region_size;
-		new_seg->writeable = old_seg->writeable;
-		new_seg->readable = old_seg->readable;
-		new_seg->executable = old_seg->executable;
+    new_seg->region_start = old_seg->region_start;
+    new_seg->region_size = old_seg->region_size;
+    new_seg->writeable = old_seg->writeable;
+    new_seg->readable = old_seg->readable;
+    new_seg->executable = old_seg->executable;
 
     unsigned int pt_size = array_num(old_seg->page_table);
 
-		// Copy the page table
-		for (unsigned int j=0; j < pt_size; j++) {
+    // Copy the page table
+    for (unsigned int j=0; j < pt_size; j++) {
       // Create a new page
       old_page = array_get(old_seg->page_table, j);
-			new_page = kmalloc(sizeof(struct page_entry));
+      new_page = kmalloc(sizeof(struct page_entry));
 
-			// Copy over the virtual page info
+      // Copy over the virtual page info
       new_page->vpage_n = old_page->vpage_n;
-			if (new_seg->writeable) { new_page->state = DIRTY; }
+      if (new_seg->writeable) { new_page->state = DIRTY; }
 
-			// get a new physical page
-			new_page->ppage_n = getppages(1, false);
+      // get a new physical page
+      new_page->ppage_n = getppages(1, false);
 
-			if (new_page->ppage_n == 0) {
-				as_destroy(newas);
-				return ENOMEM;
-			}
+      if (new_page->ppage_n == 0) {
+        as_destroy(newas);
+        return ENOMEM;
+      }
 
-			// Move memsize
-			// Check if in memory or swapped.
-			// TODO:
-			memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
-			        (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
-		}
+      // Move memsize
+      // Check if in memory or swapped.
+      // TODO:
+      memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
+             (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
+    }
 
-	}
+  }
 
-	*ret = newas;
-	return 0;
+  *ret = newas;
+  return 0;
 }
 
 
 void
 as_activate(void)
 {
-	struct addrspace *as;
+  struct addrspace *as;
 
-	as = proc_getas();
-	if (as == NULL) {
-		/*
-		 * Kernel thread without an address space; leave the
-		 * prior address space in place.
-		 */
-		return;
-	}
+  as = proc_getas();
+  if (as == NULL) {
+  /*
+   * Kernel thread without an address space; leave the
+   * prior address space in place.
+   */
+  return;
+  }
 
-	 /* Disable interrupts on this CPU while frobbing the TLB. */
+   /* Disable interrupts on this CPU while frobbing the TLB. */
  	int spl = splhigh();
 
         /* Invalidate everything in the TLB */
@@ -164,11 +164,11 @@ as_activate(void)
 
 void as_deactivate(void)
 {
-	/*
-	 * Write this. For many designs it won't need to actually do
-	 * anything. See proc.c for an explanation of why it (might)
-	 * be needed.
-	 */
+  /*
+   * Write this. For many designs it won't need to actually do
+   * anything. See proc.c for an explanation of why it (might)
+   * be needed.
+   */
 }
 
 /*
@@ -182,64 +182,64 @@ void as_deactivate(void)
  * want to implement them.
  */
 int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
-		 int readable, int writeable, int executable)
+   int readable, int writeable, int executable)
 {
 
-	// Check if there will be overlap
-	if (find_segment_from_vaddr(vaddr) != NULL) {
-		return EINVAL;
-	}
+  // Check if there will be overlap
+  if (find_segment_from_vaddr(vaddr) != NULL) {
+  return EINVAL;
+  }
 
   // Create the actual segment itself
-	struct segment_entry * segment = kmalloc(sizeof(struct segment_entry));
+  struct segment_entry * segment = kmalloc(sizeof(struct segment_entry));
 
   // Set the start and bounds for the segment
   segment->region_start = vaddr;
-	segment->region_size = memsize;
+  segment->region_size = memsize;
 
   // Set the permissions on this segment
-	if (readable < 1) segment->readable = true;
-	if (writeable < 1) segment->writeable = true;
-	if (executable < 1) segment->executable = true;
+  if (readable < 1) segment->readable = true;
+  if (writeable < 1) segment->writeable = true;
+  if (executable < 1) segment->executable = true;
 
   // Initialize the page table
-	segment->page_table = array_create();
-	if (segment->page_table == NULL) {
-		kfree(as);
-		return ENOMEM;
-	}
+  segment->page_table = array_create();
+  if (segment->page_table == NULL) {
+    kfree(as);
+    return ENOMEM;
+  }
 
   // Add it to the array
-	int result = array_add(as->segments_list, (void *) segment, NULL);
-	if (result) {
-		segment_destroy(segment);
-		as_destroy(as);
-		return result;
-	}
+  int result = array_add(as->segments_list, (void *) segment, NULL);
+  if (result) {
+    segment_destroy(segment);
+    as_destroy(as);
+    return result;
+  }
 
-	return 0;
+  return 0;
 }
 
 
 int as_prepare_load(struct addrspace *as)
 {
-	/*
-	 * Write this.
-	 */
+  /*
+   * Write this.
+   */
 
   // Just make all my asserts
-	KASSERT(as != NULL && as == curproc->p_addrspace);
-	return 0;
+  KASSERT(as != NULL && as == curproc->p_addrspace);
+  return 0;
 }
 
 
 int as_complete_load(struct addrspace *as)
 {
 
-	KASSERT(as != NULL);
+  KASSERT(as != NULL);
 
-	(void)as;
-	return 0;
+  (void)as;
+  return 0;
 }
 
 
@@ -247,17 +247,17 @@ int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
 
   // Set up the stack
-	int result = as_define_region(as, USERSTACKBASE, USERSTACKSIZE, 1, 1, 0);
+  int result = as_define_region(as, USERSTACKBASE, USERSTACKSIZE, 1, 1, 0);
 
-	// If something happens, lets return it
+  // If something happens, lets return it
  	if (result) {
  		return result;
  	}
 
-	/* Initial user-level stack pointer */
-	*stackptr = USERSTACK;
+  /* Initial user-level stack pointer */
+  *stackptr = USERSTACK;
 
-	return 0;
+  return 0;
 }
 
 
@@ -268,39 +268,39 @@ void as_destroy(struct addrspace *as)
   struct segment_entry * segment;
 
   // Iterate through each of the segments
-	for (unsigned int i = 0; i < array_num(as->segments_list); i++) {
+  for (unsigned int i = 0; i < array_num(as->segments_list); i++) {
 
-		// Get the segment and then destroy it.
-		segment = (struct segment_entry *) array_get(as->segments_list, i);
+    // Get the segment and then destroy it.
+    segment = (struct segment_entry *) array_get(as->segments_list, i);
     segment_destroy(segment);
 
-	}
+  }
 
   // Destroy the array
-	array_setsize(as->segments_list, 0);
-	array_destroy(as->segments_list);
+  array_setsize(as->segments_list, 0);
+  array_destroy(as->segments_list);
 
   // Delete the addres sspace
-	kfree(as);
+  kfree(as);
 }
 
 
 /* Destroy a segment and its page table */
 void segment_destroy(struct segment_entry * segment) {
 
-	// Iterate over the page table and destroy each one
-	for (unsigned int i = 0; i < array_num(segment->page_table); i++) {
+  // Iterate over the page table and destroy each one
+  for (unsigned int i = 0; i < array_num(segment->page_table); i++) {
 
-		// Get each page and free it
-		struct page_entry * page = (struct page_entry *) array_get(segment->page_table, i);
-		kfree(page);
-	}
+    // Get each page and free it
+    struct page_entry * page = (struct page_entry *) array_get(segment->page_table, i);
+    kfree(page);
+  }
 
-	// Destroy the array
-	array_setsize(segment->page_table, 0);
-	array_destroy(segment->page_table);
+  // Destroy the array
+  array_setsize(segment->page_table, 0);
+  array_destroy(segment->page_table);
 
   // Free the segment
-	kfree(segment);
+  kfree(segment);
 
 }
