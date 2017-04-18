@@ -115,7 +115,7 @@ proc_create(const char *name) {
   proc->sbrk_lock = lock_create("Process sbrk lock");
   if (proc->sbrk_lock == NULL) {
 		lock_destroy(proc->e_lock);
-		lock_destroy(proc->e_cv);
+		cv_destroy(proc->e_cv);
     kfree(proc->p_name);
     kfree(proc);
     return NULL;
