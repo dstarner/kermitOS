@@ -173,7 +173,7 @@ syscall(struct trapframe *tf)
 			break;
 
     case SYS_sbrk:
-      retval = SYS_sbrk((int)tf->tf_a0, &err);
+      retval = sys_sbrk((int)tf->tf_a0, &err);
       break;
 
 		default:

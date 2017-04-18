@@ -164,6 +164,7 @@ void new_thread_start(void *, unsigned long);
 int sys_execv(char *, char **, int *);
 
 vaddr_t sys_sbrk(intptr_t, int *);
-struct segment_entry * find_heap_segment();
+
+struct segment_entry * find_heap_segment(void);
 
 #endif /* _SYSCALL_H_ */
