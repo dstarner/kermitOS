@@ -164,7 +164,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
       if (page == NULL) {
-        kprintf("\nFault at 0x%x\n\n", old_addr);
+        //kprintf("\nFault at 0x%x\n\n", old_addr);
         return EFAULT;
       }
 
