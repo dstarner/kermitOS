@@ -98,6 +98,9 @@ void coremap_bootstrap() {
 /* Initialization function */
 void vm_bootstrap() {
 
+  kprintf("\n\n Addrspace: %d\n\n", sizeof(struct addrspace));
+  kprintf("\n\n Proc: %d\n\n", sizeof(struct proc));
+
   // Initialize above here
   vm_booted = true;
 
@@ -172,7 +175,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     case VM_FAULT_WRITE:
       // If no page, then create a new PTE and allocate a new physical page
       // dynamically.
-      if (page == NULL || page->writeable == 0) {
+      if (page == NULL || seg->writeable == 0) {
         // Allocate a new physical page
         paddr = getppages(1, false);
 
