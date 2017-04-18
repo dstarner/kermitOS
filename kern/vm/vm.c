@@ -98,8 +98,8 @@ void coremap_bootstrap() {
 /* Initialization function */
 void vm_bootstrap() {
 
-  kprintf("\n\n Addrspace: %d\n\n", sizeof(struct addrspace));
-  kprintf("\n\n Proc: %d\n\n", sizeof(struct proc));
+  //kprintf("\n\n Addrspace: %d\n\n", sizeof(struct addrspace));
+  //kprintf("\n\n Proc: %d\n\n", sizeof(struct proc));
 
   // Initialize above here
   vm_booted = true;
@@ -149,7 +149,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // of the allocated regions and should return an error.
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) {
-    kprintf("\nFault at 0x%x\n\n", old_addr);
+    //kprintf("\nFault at 0x%x\n\n", old_addr);
     return EFAULT;
   }
 

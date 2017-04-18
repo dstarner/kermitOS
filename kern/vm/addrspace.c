@@ -231,10 +231,10 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
    int readable, int writeable, int executable)
 {
 
-  if (executable) {kprintf("CODE/TEXT: Executable, ");}
-  if (writeable) {kprintf("Writeable, ");}
-  if (readable) {kprintf("Readable, ");}
-  kprintf("0x%x --> 0x%x\n", vaddr, vaddr + memsize);
+  //if (executable) {kprintf("CODE/TEXT: Executable, ");}
+  //if (writeable) {kprintf("Writeable, ");}
+  //if (readable) {kprintf("Readable, ");}
+  //kprintf("0x%x --> 0x%x\n", vaddr, vaddr + memsize);
 
   // Check if there will be overlap
   if (find_segment_from_vaddr(vaddr) != NULL) {
