@@ -146,7 +146,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) return EFAULT;
 
-  kprintf("VM Fault with perms E: %d, R: %d, W: %d at vaddr %x\n", seg->executable, seg->readable, seg->writeable, faultaddress);
+  // kprintf("VM Fault with perms E: %d, R: %d, W: %d at vaddr %x\n", seg->executable, seg->readable, seg->writeable, faultaddress);
 
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
