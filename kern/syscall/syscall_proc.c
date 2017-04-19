@@ -79,6 +79,13 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	// Update status if status exists
 	*status = procs[pid]->exit_code;
 
+        for (int fd=0;fd<OPEN_MAX; fd++) {
+          if (procs[pid]->f_table[fd] != NULL && procs[pid]->f_table[fd]->fh_lock != NULL) {
+            lock_destroy(procs[pid]->f_table[fd]->fh_lock);
+          }
+          if (procs[pid]->f_table[fd] != NULL) {kfree(procs[pid]->f_table[fd]);}
+        }
+
 	// Release the lock
 	lock_release(procs[pid]->e_lock);
 
@@ -86,6 +93,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	// Destroy Addrspace
 	as_destroy(procs[pid]->p_addrspace);
 	procs[pid]->p_addrspace = NULL;
+
+        lock_destroy(procs[pid]->sbrk_lock);
 
 	// Destroy synch stuff
 	cv_destroy(procs[pid]->e_cv);
