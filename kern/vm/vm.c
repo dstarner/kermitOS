@@ -140,7 +140,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // First align the fault address to the starting address of the page
   faultaddress &= PAGE_FRAME;
 
-
   // Try to find the physical address translation first.
   // If the page isn't found, then it will become 0.
   struct segment_entry * seg = find_segment_from_vaddr(old_addr);
@@ -153,7 +152,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     return EFAULT;
   }
 
-
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
 
@@ -161,7 +159,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   switch (faulttype) {
     case VM_FAULT_READ:
         kprintf("Reading page at 0x%x\n", faultaddress);
-
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
       if (page == NULL) {
@@ -181,6 +178,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         kprintf("Requested 0x%x, so adding page to cover 0x%x -> 0x%x.\n", old_addr, faultaddress, (faultaddress + PAGE_SIZE)-1);
         // Allocate a new physical page
         paddr = getppages(1, false);
+
+        // If a page cannot be acquired, then just say there's no memory...
+        if (paddr == 0) {
+          return ENOMEM;
+        }
 
         // Create a new page entry to reference the physical page that was
         // just requested.
@@ -213,7 +215,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
   // At this point the paddr needs to exist or else it would not have gotten
   // this far.
-
+  if (paddr == 0) {
+    kprintf("faulttype %d vaddr %x -> paddr %x\n", faulttype, faultaddress, paddr);
+  }
   KASSERT(paddr != 0);
 
   // I believe this part attempts to find an available TLB page entry and caches
