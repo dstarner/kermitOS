@@ -98,8 +98,10 @@ void coremap_bootstrap() {
 /* Initialization function */
 void vm_bootstrap() {
 
-  //kprintf("\n\n Addrspace: %d\n\n", sizeof(struct addrspace));
-  //kprintf("\n\n Proc: %d\n\n", sizeof(struct proc));
+  kprintf("\n\n Addrspace: %d\n\n", sizeof(struct addrspace));
+  kprintf("\n\n Proc: %d\n\n", sizeof(struct proc));
+  kprintf("\n\n Page Entry: %d\n\n", sizeof(struct page_entry));
+  kprintf("\n\n Segment: %d\n\n", sizeof(struct segment_entry));
 
   // Initialize above here
   vm_booted = true;

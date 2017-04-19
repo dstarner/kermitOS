@@ -57,6 +57,10 @@ paddr_t coremap_pagestartaddr;
 unsigned int COREMAP_PAGES;
 unsigned int current_page;
 
+unsigned int pages_alloc;
+unsigned int segments_alloc;
+unsigned int addrs_alloc;
+
 // Array based coremap
 struct coremap_page *coremap;
 
