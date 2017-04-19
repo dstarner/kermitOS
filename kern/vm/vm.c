@@ -162,8 +162,24 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
       if (page == NULL) {
-        //kprintf("\nFault at 0x%x\n\n", old_addr);
-        return EFAULT;
+        kprintf("Requested 0x%x, so adding page to cover 0x%x -> 0x%x.\n", old_addr, faultaddress, (faultaddress + PAGE_SIZE)-1);
+        // Allocate a new physical page
+        paddr = getppages(1, false);
+
+        // If a page cannot be acquired, then just say there's no memory...
+        if (paddr == 0) {
+          return ENOMEM;
+        }
+
+        // Create a new page entry to reference the physical page that was
+        // just requested.
+        page = (struct page_entry *) kmalloc(sizeof(struct page_entry));
+        // Set the values of the new page created.
+        page->ppage_n = paddr;
+        page->vpage_n = faultaddress;
+        page->state = CLEAN; // If a page is writable then assume it's dirty.
+
+        array_add(seg->page_table, page, NULL);
       }
 
       // Set the physical page to the page's ppage.
