@@ -152,6 +152,11 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
       // Create a new page
       old_page = array_get(old_seg->page_table, j);
       new_page = kmalloc(sizeof(struct page_entry));
+      if (new_page == NULL) {
+        segment_destroy(new_seg);
+        as_destroy(newas);
+        return ENOMEM;
+      }
 
       // Copy over the virtual page info
       new_page->vpage_n = old_page->vpage_n;
@@ -161,6 +166,7 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
       new_page->ppage_n = getppages(1, false);
 
       if (new_page->ppage_n == 0) {
+        segment_destroy(new_seg);
         as_destroy(newas);
         return ENOMEM;
       }
