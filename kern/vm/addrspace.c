@@ -68,7 +68,7 @@ as_create(bool createHeap) {
   // Create the heap region
   struct segment_entry * heap_segment = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
 
-  //kprintf("HEAP: 0x%x --> 0x%x\n", USERHEAPSTART, USERHEAPSTART + 0);
+  kprintf("HEAP: 0x%x --> 0x%x\n", USERHEAPSTART, USERHEAPSTART + 0);
 
   heap_segment->isHeap = true;
 
@@ -237,10 +237,10 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
    int readable, int writeable, int executable)
 {
 
-  //if (executable) {kprintf("CODE/TEXT: Executable, ");}
-  //if (writeable) {kprintf("Writeable, ");}
-  //if (readable) {kprintf("Readable, ");}
-  //kprintf("0x%x --> 0x%x\n", vaddr, vaddr + memsize);
+  if (executable) {kprintf("CODE/TEXT: Executable, ");}
+  if (writeable) {kprintf("Writeable, ");}
+  if (readable) {kprintf("Readable, ");}
+  kprintf("0x%x --> 0x%x\n", vaddr, vaddr + memsize);
 
   // Check if there will be overlap
   if (find_segment_from_vaddr(vaddr) != NULL) {
@@ -321,6 +321,8 @@ int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 /* Destroy an address space and all its segments */
 void as_destroy(struct addrspace *as)
 {
+
+  if (as == NULL) {return;}
 
   struct segment_entry * segment;
 
