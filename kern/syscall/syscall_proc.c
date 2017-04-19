@@ -445,7 +445,8 @@ void * sys_sbrk(intptr_t amt, int *err) {
   // While one can lower the "break" by passing negative values of amount, one
   // may not set the end of the heap to an address lower than the beginning of
   // the heap. Attempts to do so must be rejected.
-  if (amt < 0 && seg->region_size < ((unsigned int) amt) * PAGE_SIZE) {
+  int new_size = ((int) seg->region_size) + amt;
+  if (amt < 0 && new_size < 0) {
     lock_release(curproc->sbrk_lock);
     *err = EINVAL;
     return ((void *) -1) ;
