@@ -419,8 +419,8 @@ void * sys_sbrk(intptr_t amt, int *err) {
 
   struct segment_entry * seg = find_heap_segment();
   if (seg == NULL) {
-    *err = ENOMEM;
-    return ((void *)-1) ;
+    *err = EFAULT;
+    return ((void *) -1);
   }
 
   // The call (like all system calls) should be atomic. In this case, that means

@@ -75,37 +75,43 @@ kill_curthread(vaddr_t epc, unsigned code, vaddr_t vaddr)
 {
 	int sig = 0;
 
-	KASSERT(code < NTRAPCODES);
-	switch (code) {
-	    case EX_IRQ:
-	    case EX_IBE:
-	    case EX_DBE:
-	    case EX_SYS:
-		/* should not be seen */
-		KASSERT(0);
-		sig = SIGABRT;
-		break;
-	    case EX_MOD:
-	    case EX_TLBL:
-	    case EX_TLBS:
-		sig = SIGSEGV;
-		break;
-	    case EX_ADEL:
-	    case EX_ADES:
-		sig = SIGBUS;
-		break;
-	    case EX_BP:
-		sig = SIGTRAP;
-		break;
-	    case EX_RI:
-		sig = SIGILL;
-		break;
-	    case EX_CPU:
-		sig = SIGSEGV;
-		break;
-	    case EX_OVF:
-		sig = SIGFPE;
-		break;
+  KASSERT(code < NTRAPCODES);
+  switch (code) {
+    case EX_IRQ:
+    case EX_IBE:
+    case EX_DBE:
+    case EX_SYS:
+    /* should not be seen */
+      KASSERT(0);
+      sig = SIGABRT;
+      break;
+
+    case EX_MOD:
+    case EX_TLBL:
+    case EX_TLBS:
+      sig = SIGSEGV;
+      break;
+
+    case EX_ADEL:
+    case EX_ADES:
+      sig = SIGBUS;
+      break;
+
+    case EX_BP:
+      sig = SIGTRAP;
+      break;
+
+    case EX_RI:
+      sig = SIGILL;
+      break;
+
+    case EX_CPU:
+      sig = SIGSEGV;
+      break;
+
+    case EX_OVF:
+      sig = SIGFPE;
+      break;
 	}
 
 	/*
