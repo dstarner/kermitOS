@@ -160,6 +160,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
   switch (faulttype) {
     case VM_FAULT_READ:
+        kprintf("Reading page at 0x%x\n", faultaddress);
 
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
@@ -176,13 +177,14 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
       // If no page, then create a new PTE and allocate a new physical page
       // dynamically.
       if (page == NULL) {
+
+        kprintf("Requested 0x%x, so adding page to cover 0x%x -> 0x%x.\n", old_addr, faultaddress, (faultaddress + PAGE_SIZE)-1);
         // Allocate a new physical page
         paddr = getppages(1, false);
 
         // Create a new page entry to reference the physical page that was
         // just requested.
         page = (struct page_entry *) kmalloc(sizeof(struct page_entry));
-
         // Set the values of the new page created.
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
