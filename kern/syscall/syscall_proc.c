@@ -399,7 +399,7 @@ void sys_exit(int exit_code, bool fatal_signal) {
    }
 
    // Destroy Address space
-   as_destroy(curproc->p_addrspace);
+   as_destroy(curproc->p_addrspace); // BUS ERROR ON as_destroy
    curproc->p_addrspace = NULL;
 
    // Destory proc
@@ -476,6 +476,45 @@ void * sys_sbrk(intptr_t amt, int *err) {
   }
 
   seg->region_size += amt;
+
+  // Pages need to be freed if the heap size is being shrunken.
+  // At this point we already made sure the segment still has positive space
+  // already so we only need to free the pages here. Also, the addresses
+  // will be page aligned too at this point so just provide the right paddr to
+  // free the right page.
+  if (amt < 0) {
+    // Recalculate the new last vaddr on the smaller segment
+    vaddr_t new_end_range = seg->region_start + seg->region_size;
+    struct array * out_of_bounds_pages = array_create();
+
+    // Iterate over the page table and destroy each one
+    for (unsigned int i = 0; i < array_num(seg->page_table); i++) {
+      // Get each page and free it
+      struct page_entry * page = (struct page_entry *) array_get(seg->page_table, i);
+
+      // Free all pages that have vaddrs that are greater than the new end range.
+      if (page->vpage_n >= new_end_range) {
+        array_add(out_of_bounds_pages, (void *) i, NULL);
+      }
+    }
+
+    for (unsigned int i = 0; i < array_num(out_of_bounds_pages); i++) {
+      unsigned int page_i = (unsigned int) array_get(out_of_bounds_pages, i);
+      // kprintf("for i %u -> page_i %u\n", i, page_i);
+
+      struct page_entry * page = (struct page_entry *) array_get(seg->page_table, page_i);
+
+      // kprintf("freeing paddr %x, ", page->ppage_n);
+      // kprintf("freeing vaddr %x\n", page->vpage_n);
+      freeppage(page->ppage_n);
+      kfree(page);
+      array_remove(seg->page_table, i);
+    }
+
+    // Clean up the data structure after.
+    array_setsize(out_of_bounds_pages, 0);
+    array_destroy(out_of_bounds_pages);
+  }
 
   lock_release(curproc->sbrk_lock);
   return ((void *) old_break);
