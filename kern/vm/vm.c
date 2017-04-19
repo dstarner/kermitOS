@@ -148,7 +148,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // of the allocated regions and should return an error.
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) {
-    kprintf("\nFault at 0x%x\n\n", old_addr);
+    //kprintf("\nFault at 0x%x\n\n", old_addr);
     return EFAULT;
   }
 
@@ -158,11 +158,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
   switch (faulttype) {
     case VM_FAULT_READ:
-        kprintf("Reading page at 0x%x\n", faultaddress);
+        //kprintf("Reading page at 0x%x\n", faultaddress);
       // If the page isn't found, there's something wrong and there is a
       // segmentation fault.
       if (page == NULL) {
-        kprintf("Requested 0x%x, so adding page to cover 0x%x -> 0x%x.\n", old_addr, faultaddress, (faultaddress + PAGE_SIZE)-1);
+        //kprintf("Requested 0x%x, so adding page to cover 0x%x -> 0x%x.\n", old_addr, faultaddress, (faultaddress + PAGE_SIZE)-1);
         // Allocate a new physical page
         paddr = getppages(1, false);
 
@@ -191,7 +191,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
       // dynamically.
       if (page == NULL) {
 
-        kprintf("Requested 0x%x, so adding page to cover 0x%x -> 0x%x.\n", old_addr, faultaddress, (faultaddress + PAGE_SIZE)-1);
+        //kprintf("Requested 0x%x, so adding page to cover 0x%x -> 0x%x.\n", old_addr, faultaddress, (faultaddress + PAGE_SIZE)-1);
         // Allocate a new physical page
         paddr = getppages(1, false);
 
@@ -232,7 +232,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // At this point the paddr needs to exist or else it would not have gotten
   // this far.
   if (paddr == 0) {
-    kprintf("faulttype %d vaddr %x -> paddr %x\n", faulttype, faultaddress, paddr);
+    //kprintf("faulttype %d vaddr %x -> paddr %x\n", faulttype, faultaddress, paddr);
   }
   KASSERT(paddr != 0);
 
