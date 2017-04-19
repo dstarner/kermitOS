@@ -79,12 +79,15 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	// Update status if status exists
 	*status = procs[pid]->exit_code;
 
-        for (int fd=0;fd<OPEN_MAX; fd++) {
-          if (procs[pid]->f_table[fd] != NULL && procs[pid]->f_table[fd]->fh_lock != NULL) {
-            lock_destroy(procs[pid]->f_table[fd]->fh_lock);
-          }
-          if (procs[pid]->f_table[fd] != NULL) {kfree(procs[pid]->f_table[fd]);}
-        }
+        //for (int fd=3;fd<OPEN_MAX; fd++) {
+        //  if (procs[pid]->f_table[fd] != NULL && procs[pid]->f_table[fd]->fh_lock != NULL) {
+        //    if (lock_do_i_hold(procs[pid]->f_table[fd]->fh_lock)) {
+        //      lock_release(procs[pid]->f_table[fd]->fh_lock);
+        //    }
+        //    lock_destroy(procs[pid]->f_table[fd]->fh_lock);
+        //  }
+        //  if (procs[pid]->f_table[fd] != NULL) {kfree(procs[pid]->f_table[fd]);}
+        //}
 
 	// Release the lock
 	lock_release(procs[pid]->e_lock);
@@ -94,6 +97,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	as_destroy(procs[pid]->p_addrspace);
 	procs[pid]->p_addrspace = NULL;
 
+        if (lock_do_i_hold(procs[pid]->sbrk_lock)) lock_release(procs[pid]->sbrk_lock);
         lock_destroy(procs[pid]->sbrk_lock);
 
 	// Destroy synch stuff
@@ -383,6 +387,16 @@ void sys_exit(int exit_code, bool fatal_signal) {
    // DESTROY IT ALL! (I'm tired and just want this shit to work)
    cv_destroy(curproc->e_cv);
    lock_destroy(curproc->e_lock);
+
+   for (int fd=0;fd<OPEN_MAX; fd++) {
+     if (curproc->f_table[fd] != NULL && curproc->f_table[fd]->fh_lock != NULL) {
+       if (lock_do_i_hold(curproc->f_table[fd]->fh_lock)) {
+         lock_release(curproc->f_table[fd]->fh_lock);
+       }
+       lock_destroy(curproc->f_table[fd]->fh_lock);
+     }
+     if (curproc->f_table[fd] != NULL) {kfree(curproc->f_table[fd]);}
+   }
 
    // Destroy Address space
    as_destroy(curproc->p_addrspace);
