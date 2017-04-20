@@ -101,7 +101,12 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
 
   newas = as_create(false);
   if (newas==NULL) {
-  return ENOMEM;
+    return ENOMEM;
+  }
+
+  if (newas->segments_list == NULL) {
+    kfree(newas);
+    return ENOMEM;
   }
 
   struct segment_entry * old_seg;
@@ -316,6 +321,10 @@ void as_destroy(struct addrspace *as)
 {
 
   if (as == NULL) {return;}
+
+  if (as->segments_list == NULL) {
+    kfree(as);
+  }
 
   struct segment_entry * segment;
 
