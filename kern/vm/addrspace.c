@@ -100,14 +100,7 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
   struct addrspace *newas;
 
   newas = as_create(false);
-  if (newas==NULL) {
-  return ENOMEM;
-  }
-
-  // Create the new array
-  newas->segments_list = array_create();
-  if (newas->segments_list == NULL) {
-    kfree(newas);
+    if (newas==NULL) {
     return ENOMEM;
   }
 
