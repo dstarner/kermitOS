@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,99 +66,99 @@ struct proc *procs[128];
 static
 struct proc *
 proc_create(const char *name) {
-	struct proc *proc;
+  struct proc *proc;
 
-	proc = kmalloc(sizeof(*proc));
-	if (proc == NULL) {
-		return NULL;
-	}
-	proc->p_name = kstrdup(name);
-	if (proc->p_name == NULL) {
-		kfree(proc);
-		return NULL;
-	}
+  proc = kmalloc(sizeof(*proc));
+  if (proc == NULL) {
+    return NULL;
+  }
+  proc->p_name = kstrdup(name);
+  if (proc->p_name == NULL) {
+    kfree(proc);
+    return NULL;
+  }
 
-	proc->p_numthreads = 0;
-	spinlock_init(&proc->p_lock);
+  proc->p_numthreads = 0;
+  spinlock_init(&proc->p_lock);
 
-	/* VM fields */
-	proc->p_addrspace = NULL;
+  /* VM fields */
+  proc->p_addrspace = NULL;
 
-	/* VFS fields */
-	proc->p_cwd = NULL;
+  /* VFS fields */
+  proc->p_cwd = NULL;
 
-	// Null out file table
-	for(int fd = 0; fd < __OPEN_MAX; fd++) {
- 		proc->f_table[fd] = NULL;
-	}
+  // Null out file table
+  for(int fd = 0; fd < __OPEN_MAX; fd++) {
+     proc->f_table[fd] = NULL;
+  }
 
-	// Lock and exit stuff
- 	proc->e_lock = lock_create("Process lock");
-	if (proc->e_lock == NULL) {
-		kfree(proc->p_name);
-		kfree(proc);
-		return NULL;
-	}
-
-	proc->e_cv = cv_create("Process CV");
-	if (proc->e_cv == NULL) {
-		lock_destroy(proc->e_lock);
-		kfree(proc->p_name);
-		kfree(proc);
-		return NULL;
-	}
-
-	proc->can_exit = false;
-        proc->parent_pid = -1;
-
-    // Lock and exit stuff
-  proc->sbrk_lock = lock_create("Process sbrk lock");
-  if (proc->sbrk_lock == NULL) {
-		lock_destroy(proc->e_lock);
-		cv_destroy(proc->e_cv);
+  // Lock and exit stuff
+   proc->e_lock = lock_create("Process lock");
+  if (proc->e_lock == NULL) {
     kfree(proc->p_name);
     kfree(proc);
     return NULL;
   }
 
-	// Get a process ID
-	for (int i=0; i < 128; i++) {
-		// Assign to empty
-		if (procs[i] == NULL) {
-			proc->pid = i;
-			procs[i] = proc;
-			if (procs[i] == NULL) {
-				return NULL;
-			}
-			return proc;
-		}
-	}
+  proc->e_cv = cv_create("Process CV");
+  if (proc->e_cv == NULL) {
+    lock_destroy(proc->e_lock);
+    kfree(proc->p_name);
+    kfree(proc);
+    return NULL;
+  }
 
-	// Could not find a process ID
-	return NULL;
+  proc->can_exit = false;
+  proc->parent_pid = -1;
+
+    // Lock and exit stuff
+  proc->sbrk_lock = lock_create("Process sbrk lock");
+  if (proc->sbrk_lock == NULL) {
+    lock_destroy(proc->e_lock);
+    cv_destroy(proc->e_cv);
+    kfree(proc->p_name);
+    kfree(proc);
+    return NULL;
+  }
+
+  // Get a process ID
+  for (int i=0; i < 128; i++) {
+    // Assign to empty
+    if (procs[i] == NULL) {
+      proc->pid = i;
+      procs[i] = proc;
+      if (procs[i] == NULL) {
+        return NULL;
+      }
+      return proc;
+    }
+  }
+
+  // Could not find a process ID
+  return NULL;
 }
 
 
 struct proc * proc_new_child(const char * new_name) {
-	struct proc *new_proc;
-	// Create the proc
-	new_proc = proc_create(new_name);
-	if (new_proc == NULL) {
-		return NULL;
-	}
+  struct proc *new_proc;
+  // Create the proc
+  new_proc = proc_create(new_name);
+  if (new_proc == NULL) {
+    return NULL;
+  }
 
-	new_proc->parent_pid = curproc->pid;
+  new_proc->parent_pid = curproc->pid;
 
-	// Copy file table
-	for(int fd=0;fd<OPEN_MAX;fd++) {
-		new_proc->f_table[fd] = curproc->f_table[fd];
-		if(new_proc->f_table[fd] != NULL) {
-			// Another process is using
-			new_proc->f_table[fd]->ref_count++;
-		}
-	}
+  // Copy file table
+  for(int fd=0;fd<OPEN_MAX;fd++) {
+    new_proc->f_table[fd] = curproc->f_table[fd];
+    if(new_proc->f_table[fd] != NULL) {
+      // Another process is using
+      new_proc->f_table[fd]->ref_count++;
+    }
+  }
 
-	return new_proc;
+  return new_proc;
 }
 
 /*
@@ -170,86 +170,86 @@ struct proc * proc_new_child(const char * new_name) {
 void
 proc_destroy(struct proc *proc)
 {
-	/*
-	 * You probably want to destroy and null out much of the
-	 * process (particularly the address space) at exit time if
-	 * your wait/exit design calls for the process structure to
-	 * hang around beyond process exit. Some wait/exit designs
-	 * do, some don't.
-	 */
+  /*
+   * You probably want to destroy and null out much of the
+   * process (particularly the address space) at exit time if
+   * your wait/exit design calls for the process structure to
+   * hang around beyond process exit. Some wait/exit designs
+   * do, some don't.
+   */
 
-	KASSERT(proc != NULL);
-	KASSERT(proc != kproc);
+  KASSERT(proc != NULL);
+  KASSERT(proc != kproc);
 
-	/*
-	 * We don't take p_lock in here because we must have the only
-	 * reference to this structure. (Otherwise it would be
-	 * incorrect to destroy it.)
-	 */
+  /*
+   * We don't take p_lock in here because we must have the only
+   * reference to this structure. (Otherwise it would be
+   * incorrect to destroy it.)
+   */
 
-	/* VFS fields */
-	if (proc->p_cwd) {
-		VOP_DECREF(proc->p_cwd);
-		proc->p_cwd = NULL;
-	}
+  /* VFS fields */
+  if (proc->p_cwd) {
+    VOP_DECREF(proc->p_cwd);
+    proc->p_cwd = NULL;
+  }
 
-	/* VM fields */
-	if (proc->p_addrspace) {
-		/*
-		 * If p is the current process, remove it safely from
-		 * p_addrspace before destroying it. This makes sure
-		 * we don't try to activate the address space while
-		 * it's being destroyed.
-		 *
-		 * Also explicitly deactivate, because setting the
-		 * address space to NULL won't necessarily do that.
-		 *
-		 * (When the address space is NULL, it means the
-		 * process is kernel-only; in that case it is normally
-		 * ok if the MMU and MMU- related data structures
-		 * still refer to the address space of the last
-		 * process that had one. Then you save work if that
-		 * process is the next one to run, which isn't
-		 * uncommon. However, here we're going to destroy the
-		 * address space, so we need to make sure that nothing
-		 * in the VM system still refers to it.)
-		 *
-		 * The call to as_deactivate() must come after we
-		 * clear the address space, or a timer interrupt might
-		 * reactivate the old address space again behind our
-		 * back.
-		 *
-		 * If p is not the current process, still remove it
-		 * from p_addrspace before destroying it as a
-		 * precaution. Note that if p is not the current
-		 * process, in order to be here p must either have
-		 * never run (e.g. cleaning up after fork failed) or
-		 * have finished running and exited. It is quite
-		 * incorrect to destroy the proc structure of some
-		 * random other process while it's still running...
-		 */
-		struct addrspace *as;
+  /* VM fields */
+  if (proc->p_addrspace) {
+    /*
+     * If p is the current process, remove it safely from
+     * p_addrspace before destroying it. This makes sure
+     * we don't try to activate the address space while
+     * it's being destroyed.
+     *
+     * Also explicitly deactivate, because setting the
+     * address space to NULL won't necessarily do that.
+     *
+     * (When the address space is NULL, it means the
+     * process is kernel-only; in that case it is normally
+     * ok if the MMU and MMU- related data structures
+     * still refer to the address space of the last
+     * process that had one. Then you save work if that
+     * process is the next one to run, which isn't
+     * uncommon. However, here we're going to destroy the
+     * address space, so we need to make sure that nothing
+     * in the VM system still refers to it.)
+     *
+     * The call to as_deactivate() must come after we
+     * clear the address space, or a timer interrupt might
+     * reactivate the old address space again behind our
+     * back.
+     *
+     * If p is not the current process, still remove it
+     * from p_addrspace before destroying it as a
+     * precaution. Note that if p is not the current
+     * process, in order to be here p must either have
+     * never run (e.g. cleaning up after fork failed) or
+     * have finished running and exited. It is quite
+     * incorrect to destroy the proc structure of some
+     * random other process while it's still running...
+     */
+    struct addrspace *as;
 
-		if (proc == curproc) {
-			as = proc_setas(NULL);
-			as_deactivate();
-		}
-		else {
-			as = proc->p_addrspace;
-			proc->p_addrspace = NULL;
-		}
-		as_destroy(as);
-	}
+    if (proc == curproc) {
+      as = proc_setas(NULL);
+      as_deactivate();
+    }
+    else {
+      as = proc->p_addrspace;
+      proc->p_addrspace = NULL;
+    }
+    as_destroy(as);
+  }
 
-	// Destroy the synch variables
-	lock_destroy(proc->e_lock);
-	cv_destroy(proc->e_cv);
+  // Destroy the synch variables
+  lock_destroy(proc->e_lock);
+  cv_destroy(proc->e_cv);
 
-	KASSERT(proc->p_numthreads == 0);
-	spinlock_cleanup(&proc->p_lock);
+  KASSERT(proc->p_numthreads == 0);
+  spinlock_cleanup(&proc->p_lock);
 
-	kfree(proc->p_name);
-	kfree(proc);
+  kfree(proc->p_name);
+  kfree(proc);
 }
 
 /*
@@ -258,10 +258,10 @@ proc_destroy(struct proc *proc)
 void
 proc_bootstrap(void)
 {
-	kproc = proc_create("[kernel]");
-	if (kproc == NULL) {
-		panic("proc_create for kproc failed\n");
-	}
+  kproc = proc_create("[kernel]");
+  if (kproc == NULL) {
+    panic("proc_create for kproc failed\n");
+  }
 }
 
 /*
@@ -273,32 +273,32 @@ proc_bootstrap(void)
 struct proc *
 proc_create_runprogram(const char *name)
 {
-	struct proc *newproc;
+  struct proc *newproc;
 
-	newproc = proc_create(name);
-	if (newproc == NULL) {
-		return NULL;
-	}
+  newproc = proc_create(name);
+  if (newproc == NULL) {
+    return NULL;
+  }
 
-	/* VM fields */
+  /* VM fields */
 
-	newproc->p_addrspace = NULL;
+  newproc->p_addrspace = NULL;
 
-	/* VFS fields */
+  /* VFS fields */
 
-	/*
-	 * Lock the current process to copy its current directory.
-	 * (We don't need to lock the new process, though, as we have
-	 * the only reference to it.)
-	 */
-	spinlock_acquire(&curproc->p_lock);
-	if (curproc->p_cwd != NULL) {
-		VOP_INCREF(curproc->p_cwd);
-		newproc->p_cwd = curproc->p_cwd;
-	}
-	spinlock_release(&curproc->p_lock);
+  /*
+   * Lock the current process to copy its current directory.
+   * (We don't need to lock the new process, though, as we have
+   * the only reference to it.)
+   */
+  spinlock_acquire(&curproc->p_lock);
+  if (curproc->p_cwd != NULL) {
+    VOP_INCREF(curproc->p_cwd);
+    newproc->p_cwd = curproc->p_cwd;
+  }
+  spinlock_release(&curproc->p_lock);
 
-	return newproc;
+  return newproc;
 }
 
 /*
@@ -313,19 +313,19 @@ proc_create_runprogram(const char *name)
 int
 proc_addthread(struct proc *proc, struct thread *t)
 {
-	int spl;
+  int spl;
 
-	KASSERT(t->t_proc == NULL);
+  KASSERT(t->t_proc == NULL);
 
-	spinlock_acquire(&proc->p_lock);
-	proc->p_numthreads++;
-	spinlock_release(&proc->p_lock);
+  spinlock_acquire(&proc->p_lock);
+  proc->p_numthreads++;
+  spinlock_release(&proc->p_lock);
 
-	spl = splhigh();
-	t->t_proc = proc;
-	splx(spl);
+  spl = splhigh();
+  t->t_proc = proc;
+  splx(spl);
 
-	return 0;
+  return 0;
 }
 
 /*
@@ -340,20 +340,20 @@ proc_addthread(struct proc *proc, struct thread *t)
 void
 proc_remthread(struct thread *t)
 {
-	struct proc *proc;
-	int spl;
+  struct proc *proc;
+  int spl;
 
-	proc = t->t_proc;
-	KASSERT(proc != NULL);
+  proc = t->t_proc;
+  KASSERT(proc != NULL);
 
-	spinlock_acquire(&proc->p_lock);
-	KASSERT(proc->p_numthreads > 0);
-	proc->p_numthreads--;
-	spinlock_release(&proc->p_lock);
+  spinlock_acquire(&proc->p_lock);
+  KASSERT(proc->p_numthreads > 0);
+  proc->p_numthreads--;
+  spinlock_release(&proc->p_lock);
 
-	spl = splhigh();
-	t->t_proc = NULL;
-	splx(spl);
+  spl = splhigh();
+  t->t_proc = NULL;
+  splx(spl);
 }
 
 /*
@@ -367,17 +367,17 @@ proc_remthread(struct thread *t)
 struct addrspace *
 proc_getas(void)
 {
-	struct addrspace *as;
-	struct proc *proc = curproc;
+  struct addrspace *as;
+  struct proc *proc = curproc;
 
-	if (proc == NULL) {
-		return NULL;
-	}
+  if (proc == NULL) {
+    return NULL;
+  }
 
-	spinlock_acquire(&proc->p_lock);
-	as = proc->p_addrspace;
-	spinlock_release(&proc->p_lock);
-	return as;
+  spinlock_acquire(&proc->p_lock);
+  as = proc->p_addrspace;
+  spinlock_release(&proc->p_lock);
+  return as;
 }
 
 /*
@@ -387,14 +387,14 @@ proc_getas(void)
 struct addrspace *
 proc_setas(struct addrspace *newas)
 {
-	struct addrspace *oldas;
-	struct proc *proc = curproc;
+  struct addrspace *oldas;
+  struct proc *proc = curproc;
 
-	KASSERT(proc != NULL);
+  KASSERT(proc != NULL);
 
-	spinlock_acquire(&proc->p_lock);
-	oldas = proc->p_addrspace;
-	proc->p_addrspace = newas;
-	spinlock_release(&proc->p_lock);
-	return oldas;
+  spinlock_acquire(&proc->p_lock);
+  oldas = proc->p_addrspace;
+  proc->p_addrspace = newas;
+  spinlock_release(&proc->p_lock);
+  return oldas;
 }
