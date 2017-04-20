@@ -100,8 +100,8 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
   struct addrspace *newas;
 
   newas = as_create(false);
-    if (newas==NULL) {
-    return ENOMEM;
+  if (newas==NULL) {
+  return ENOMEM;
   }
 
   struct segment_entry * old_seg;
