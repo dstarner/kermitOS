@@ -473,7 +473,17 @@ void * sys_sbrk(intptr_t amt, int *err) {
   if (amt < 0 && new_size < 0) {
     lock_release(curproc->sbrk_lock);
     *err = EINVAL;
-    return ((void *) -1) ;
+    return ((void *) -1);
+  }
+
+  // Recalculate the new last vaddr on the smaller segment
+  vaddr_t new_end_range = seg->region_start + seg->region_size + amt;
+
+  // If the new range overlaps with the stack, then this sbrk is not allowed.
+  if (new_end_range > 0x80000000) {
+    lock_release(curproc->sbrk_lock);
+    *err = ENOMEM;
+    return ((void *) -1);
   }
 
   seg->region_size += amt;
@@ -484,8 +494,6 @@ void * sys_sbrk(intptr_t amt, int *err) {
   // will be page aligned too at this point so just provide the right paddr to
   // free the right page.
   if (amt < 0) {
-    // Recalculate the new last vaddr on the smaller segment
-    vaddr_t new_end_range = seg->region_start + seg->region_size;
     struct array * out_of_bounds_pages = array_create();
 
     // Iterate over the page table and destroy each one
@@ -517,6 +525,8 @@ void * sys_sbrk(intptr_t amt, int *err) {
     array_setsize(out_of_bounds_pages, 0);
     array_destroy(out_of_bounds_pages);
 
+    // Remove invalid TLB entries
+    // TODO: Only remove the invalid ones
     /* Disable interrupts on this CPU while frobbing the TLB. */
     int spl = splhigh();
 
