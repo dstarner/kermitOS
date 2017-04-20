@@ -123,6 +123,10 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
 
     // Create the new segment
     new_seg = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
+    if (new_seg == NULL) {
+      as_destroy(newas);
+      return ENOMEM;
+    }
 
     // Copy start and size and permissions
     new_seg->region_start = old_seg->region_start;

@@ -68,6 +68,24 @@ struct proc *
 proc_create(const char *name) {
   struct proc *proc;
 
+  int pos_pid = 0;
+  bool found = false;
+  while (!found && pos_pid < 128) {
+
+    // Found PID
+    if (procs[pos_pid] == NULL) {
+      found = true;
+      break;
+    }
+
+    // Increment possible PIDs
+    pos_pid++;
+  }
+
+  if (!found) {
+    return NULL;
+  }
+
   proc = kmalloc(sizeof(*proc));
   if (proc == NULL) {
     return NULL;
