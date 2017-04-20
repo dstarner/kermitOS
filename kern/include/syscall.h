@@ -32,6 +32,7 @@
 
 
 #include <cdefs.h> /* for __DEAD */
+#include <spl.h>
 #include <addrspace.h>
 struct trapframe; /* from <machine/trapframe.h> */
 

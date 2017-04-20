@@ -1,5 +1,6 @@
 #include <types.h>
 #include <addrspace.h>
+#include <spl.h>
 #include <syscall.h>
 #include <synch.h>
 #include <kern/errno.h>
@@ -494,12 +495,13 @@ void * sys_sbrk(intptr_t amt, int *err) {
 
       // Free all pages that have vaddrs that are greater than the new end range.
       if (page->vpage_n >= new_end_range) {
+        // kprintf("found page to evict at i %u\n", i);
         array_add(out_of_bounds_pages, (void *) i, NULL);
       }
     }
 
-    for (unsigned int i = 0; i < array_num(out_of_bounds_pages); i++) {
-      unsigned int page_i = (unsigned int) array_get(out_of_bounds_pages, i);
+    for (unsigned int i = array_num(out_of_bounds_pages); i > 0 ; i--) {
+      unsigned int page_i = (unsigned int) array_get(out_of_bounds_pages, i - 1);
       // kprintf("for i %u -> page_i %u\n", i, page_i);
 
       struct page_entry * page = (struct page_entry *) array_get(seg->page_table, page_i);
@@ -508,12 +510,22 @@ void * sys_sbrk(intptr_t amt, int *err) {
       // kprintf("freeing vaddr %x\n", page->vpage_n);
       freeppage(page->ppage_n);
       kfree(page);
-      array_remove(seg->page_table, i);
+      array_remove(seg->page_table, page_i);
     }
 
     // Clean up the data structure after.
     array_setsize(out_of_bounds_pages, 0);
     array_destroy(out_of_bounds_pages);
+
+    /* Disable interrupts on this CPU while frobbing the TLB. */
+    int spl = splhigh();
+
+         /* Invalidate everything in the TLB */
+    for (unsigned int i=0; i<NUM_TLB; i++) {
+      tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+    }
+
+    splx(spl);
   }
 
   lock_release(curproc->sbrk_lock);
