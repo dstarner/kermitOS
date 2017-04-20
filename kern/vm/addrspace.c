@@ -104,13 +104,6 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
   return ENOMEM;
   }
 
-  // Create the new array
-  newas->segments_list = array_create();
-  if (newas->segments_list == NULL) {
-    kfree(newas);
-    return ENOMEM;
-  }
-
   struct segment_entry * old_seg;
   struct segment_entry * new_seg;
   struct page_entry * old_page;
