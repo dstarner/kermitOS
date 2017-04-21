@@ -80,7 +80,24 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	// Update status if status exists
 	*status = procs[pid]->exit_code;
 
-        for (int fd=0; fd < 128; fd++) {
+        for (int fd=0; fd < 3; fd++) {
+          if (procs[pid]->f_table[fd] == NULL) continue;
+
+          lock_acquire(procs[pid]->f_table[fd]->fh_lock);
+
+          procs[pid]->f_table[fd]->ref_count--;
+          
+          if (procs[pid]->f_table[fd]->ref_count == 0 && pid == 1) {
+            vfs_close(procs[pid]->f_table[fd]->fh_vnode);
+            lock_release(procs[pid]->f_table[fd]->fh_lock);
+            lock_destroy(procs[pid]->f_table[fd]->fh_lock);
+            kfree(procs[pid]->f_table[fd]); 
+            procs[pid]->f_table[fd] = NULL;
+          } else {
+            lock_release(procs[pid]->f_table[fd]->fh_lock);
+          }
+        }
+        for (int fd=3; fd < 128; fd++) {
           if (procs[pid]->f_table[fd] == NULL) continue;
 
           lock_acquire(procs[pid]->f_table[fd]->fh_lock);
