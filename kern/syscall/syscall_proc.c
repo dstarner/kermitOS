@@ -21,7 +21,7 @@ pid_t sys_getpid() {
 
 pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 
-	if (pid < 0 || pid > 256) {
+	if (pid <= 0 || pid > 256) {
 		*err = ESRCH;
 		return -1;
 	}
@@ -30,6 +30,11 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	if (procs[pid] == NULL) {
 		return 0;
 	}
+
+        if (curproc->pid != procs[pid]->parent_pid) {
+          *err = EINVAL;
+          return -1;
+        }
 
 	if (status == (int*) 0x0) {
 		return 0;
@@ -362,33 +367,27 @@ void sys_exit(int exit_code, bool fatal_signal) {
     curproc->exit_code = _MKWAIT_EXIT(exit_code);
   }
 
-  if (curproc->parent_pid < 0) {
-    lock_release(curproc->e_lock);
+  for (int fd=3; fd < OPEN_MAX; fd++) {
+    if (curproc->f_table[fd] == NULL) continue;
 
-   // DESTROY IT ALL! (I'm tired and just want this shit to work)
-   cv_destroy(curproc->e_cv);
-   lock_destroy(curproc->e_lock);
+    int error = 0;
+    sys_close(fd, &error);
 
-   //for (int fd=0;fd<OPEN_MAX; fd++) {
-   //  if (curproc->f_table[fd] != NULL && curproc->f_table[fd]->fh_lock != NULL) {
-   //    if (lock_do_i_hold(curproc->f_table[fd]->fh_lock)) {
-   //      lock_release(curproc->f_table[fd]->fh_lock);
-   //    }
-   //    lock_destroy(curproc->f_table[fd]->fh_lock);
-   //  }
-   //  if (curproc->f_table[fd] != NULL) {kfree(curproc->f_table[fd]);}
-   //}
+  } 
 
-   // Destroy Address space
-   as_destroy(curproc->p_addrspace); // BUS ERROR ON as_destroy
-   curproc->p_addrspace = NULL;
-
-   // Destory proc
-   kfree(procs[curproc->pid]->p_name);
-   kfree(procs[curproc->pid]);
-   procs[curproc->pid] = NULL;
+  if (curproc->pid == 1) {
+  
+    for (int fd=0; fd < 3; fd++) {
+      lock_acquire(curproc->f_table[fd]->fh_lock);
+      vfs_close(curproc->f_table[fd]->fh_vnode);
+      lock_release(curproc->f_table[fd]->fh_lock);
+      lock_destroy(curproc->f_table[fd]->fh_lock);      
+      kfree(curproc->f_table[fd]);
+      curproc->f_table[fd] = NULL;
+    } 
 
   }
+
 
   if (!procs[curproc->parent_pid]->can_exit) {
     // Let all the waiting processes know that we are waiting.
