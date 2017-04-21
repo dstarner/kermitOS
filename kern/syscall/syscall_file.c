@@ -18,8 +18,6 @@
 /* Initialize file table with stdin/out/err */
 void init_std() {
 
-  kprintf("STD creation for PID:%d\n", curproc->pid);
-
   for (int fd = 0; fd < 3; fd++) {
 
     int failure = 0;
