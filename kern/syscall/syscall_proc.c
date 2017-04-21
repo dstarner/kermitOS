@@ -91,6 +91,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
             vfs_close(procs[pid]->f_table[fd]->fh_vnode);
             lock_release(procs[pid]->f_table[fd]->fh_lock);
             lock_destroy(procs[pid]->f_table[fd]->fh_lock);
+            kfree(procs[pid]->f_table[fd]); 
+            procs[pid]->f_table[fd] = NULL;
           } else {
             lock_release(procs[pid]->f_table[fd]->fh_lock);
           }
