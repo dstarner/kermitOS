@@ -86,12 +86,12 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
           lock_acquire(procs[pid]->f_table[fd]->fh_lock);
 
           procs[pid]->f_table[fd]->ref_count--;
-          
+
           if (procs[pid]->f_table[fd]->ref_count == 0 && pid == 1) {
             vfs_close(procs[pid]->f_table[fd]->fh_vnode);
             lock_release(procs[pid]->f_table[fd]->fh_lock);
             lock_destroy(procs[pid]->f_table[fd]->fh_lock);
-            kfree(procs[pid]->f_table[fd]); 
+            kfree(procs[pid]->f_table[fd]);
             procs[pid]->f_table[fd] = NULL;
           } else {
             lock_release(procs[pid]->f_table[fd]->fh_lock);
@@ -103,12 +103,12 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
           lock_acquire(procs[pid]->f_table[fd]->fh_lock);
 
           procs[pid]->f_table[fd]->ref_count--;
-          
+
           if (procs[pid]->f_table[fd]->ref_count == 0) {
             vfs_close(procs[pid]->f_table[fd]->fh_vnode);
             lock_release(procs[pid]->f_table[fd]->fh_lock);
             lock_destroy(procs[pid]->f_table[fd]->fh_lock);
-            kfree(procs[pid]->f_table[fd]); 
+            kfree(procs[pid]->f_table[fd]);
             procs[pid]->f_table[fd] = NULL;
           } else {
             lock_release(procs[pid]->f_table[fd]->fh_lock);
@@ -379,6 +379,10 @@ int sys_execv(char *program, char **args, int *err) {
   stackptr -= ((num_of_args + 1) * sizeof(char *));
 
   // Some cleanup needed
+  for (copied_args=0; copied_args < num_of_args; copied_args++) {
+    kfree(kernel_args[copied_args]);
+  }
+
   kfree(kernel_args);
   kfree(name_copy);
   kfree(arg_address);
