@@ -80,59 +80,10 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	// Update status if status exists
 	*status = procs[pid]->exit_code;
 
-        for (int fd=0; fd < 3; fd++) {
-          if (procs[pid]->f_table[fd] == NULL) continue;
-
-          lock_acquire(procs[pid]->f_table[fd]->fh_lock);
-
-          procs[pid]->f_table[fd]->ref_count--;
-
-          if (procs[pid]->f_table[fd]->ref_count == 0 && pid == 1) {
-            vfs_close(procs[pid]->f_table[fd]->fh_vnode);
-            lock_release(procs[pid]->f_table[fd]->fh_lock);
-            lock_destroy(procs[pid]->f_table[fd]->fh_lock);
-            kfree(procs[pid]->f_table[fd]);
-            procs[pid]->f_table[fd] = NULL;
-          } else {
-            lock_release(procs[pid]->f_table[fd]->fh_lock);
-          }
-        }
-        for (int fd=3; fd < 128; fd++) {
-          if (procs[pid]->f_table[fd] == NULL) continue;
-
-          lock_acquire(procs[pid]->f_table[fd]->fh_lock);
-
-          procs[pid]->f_table[fd]->ref_count--;
-
-          if (procs[pid]->f_table[fd]->ref_count == 0) {
-            vfs_close(procs[pid]->f_table[fd]->fh_vnode);
-            lock_release(procs[pid]->f_table[fd]->fh_lock);
-            lock_destroy(procs[pid]->f_table[fd]->fh_lock);
-            kfree(procs[pid]->f_table[fd]);
-            procs[pid]->f_table[fd] = NULL;
-          } else {
-            lock_release(procs[pid]->f_table[fd]->fh_lock);
-          }
-        }
-
-	// Release the lock
-	lock_release(procs[pid]->e_lock);
-
-	// We Good to clean up and destroy the parent
-	// Destroy Addrspace
-	as_destroy(procs[pid]->p_addrspace);
-	procs[pid]->p_addrspace = NULL;
-
-        if (lock_do_i_hold(procs[pid]->sbrk_lock)) lock_release(procs[pid]->sbrk_lock);
-        lock_destroy(procs[pid]->sbrk_lock);
-
-	// Destroy synch stuff
-	cv_destroy(procs[pid]->e_cv);
-	lock_destroy(procs[pid]->e_lock);
 
 	// Destroy proc
-	kfree(procs[pid]->p_name);
-	kfree(procs[pid]);
+        lock_release(procs[pid]->e_lock);
+        proc_destroy(procs[pid]);
 	procs[pid] = NULL;
 
 	return pid;
@@ -418,15 +369,15 @@ void sys_exit(int exit_code, bool fatal_signal) {
    cv_destroy(curproc->e_cv);
    lock_destroy(curproc->e_lock);
 
-   for (int fd=0;fd<OPEN_MAX; fd++) {
-     if (curproc->f_table[fd] != NULL && curproc->f_table[fd]->fh_lock != NULL) {
-       if (lock_do_i_hold(curproc->f_table[fd]->fh_lock)) {
-         lock_release(curproc->f_table[fd]->fh_lock);
-       }
-       lock_destroy(curproc->f_table[fd]->fh_lock);
-     }
-     if (curproc->f_table[fd] != NULL) {kfree(curproc->f_table[fd]);}
-   }
+   //for (int fd=0;fd<OPEN_MAX; fd++) {
+   //  if (curproc->f_table[fd] != NULL && curproc->f_table[fd]->fh_lock != NULL) {
+   //    if (lock_do_i_hold(curproc->f_table[fd]->fh_lock)) {
+   //      lock_release(curproc->f_table[fd]->fh_lock);
+   //    }
+   //    lock_destroy(curproc->f_table[fd]->fh_lock);
+   //  }
+   //  if (curproc->f_table[fd] != NULL) {kfree(curproc->f_table[fd]);}
+   //}
 
    // Destroy Address space
    as_destroy(curproc->p_addrspace); // BUS ERROR ON as_destroy
@@ -443,18 +394,6 @@ void sys_exit(int exit_code, bool fatal_signal) {
     // Let all the waiting processes know that we are waiting.
     cv_broadcast(curproc->e_cv, curproc->e_lock);
 
-  // } else {
-  //   kprintf("exit call exit cleanup\n");
-  //
-  //   // Close out all of the current files
-  //   for (int fd = 0; fd < OPEN_MAX; fd++) {
-  //     int close_error = 0;  // We need to pass a fake val
-  //     sys_close(fd, &close_error);
-  //     kprintf("exit call close file\n");
-  //   }
-  //
-  //   // kprintf("exit call close files\n");
-  //   // Release the lock
   }
 
   lock_release(curproc->e_lock);

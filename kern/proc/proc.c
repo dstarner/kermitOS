@@ -197,10 +197,10 @@ proc_destroy(struct proc *proc)
    * do, some don't.
    */
 
+  kprintf("%d is cleaning up %d\n", curproc->pid, proc->pid);
+
   KASSERT(proc != NULL);
   KASSERT(proc != kproc);
-
-  kprintf("%d", proc->pid);
 
   /*
    * We don't take p_lock in here because we must have the only
@@ -261,8 +261,25 @@ proc_destroy(struct proc *proc)
     }
     as_destroy(as);
   }
+  for (int fd=0; fd < 3; fd++) {
+          if (proc->f_table[fd] == NULL) continue;
 
-  for (int fd=0; fd < 128; fd++) {
+          lock_acquire(proc->f_table[fd]->fh_lock);
+
+          proc->f_table[fd]->ref_count--;
+
+          if (proc->f_table[fd]->ref_count == 0 && proc->pid == 1) {
+            kprintf("Closing %d for PID %d", fd, proc->pid);
+            vfs_close(proc->f_table[fd]->fh_vnode);
+            lock_release(proc->f_table[fd]->fh_lock);
+            lock_destroy(proc->f_table[fd]->fh_lock);
+          } else {
+            lock_release(proc->f_table[fd]->fh_lock);
+          }
+        }
+
+
+  for (int fd=3; fd < 128; fd++) {
           if (proc->f_table[fd] == NULL) continue;
 
           lock_acquire(proc->f_table[fd]->fh_lock);
@@ -270,6 +287,7 @@ proc_destroy(struct proc *proc)
           proc->f_table[fd]->ref_count--;
 
           if (proc->f_table[fd]->ref_count == 0) {
+            kprintf("Closing %d for PID %d", fd, proc->pid);
             vfs_close(proc->f_table[fd]->fh_vnode);
             lock_release(proc->f_table[fd]->fh_lock);
             lock_destroy(proc->f_table[fd]->fh_lock);
@@ -282,7 +300,6 @@ proc_destroy(struct proc *proc)
   lock_destroy(proc->e_lock);
   cv_destroy(proc->e_cv);
 
-  KASSERT(proc->p_numthreads == 0);
   spinlock_cleanup(&proc->p_lock);
 
   kfree(proc->p_name);
