@@ -259,6 +259,8 @@ proc_destroy(struct proc *proc)
     }
     as_destroy(as);
   }
+  
+  lock_destroy(proc->sbrk_lock);
 
   // Destroy the synch variables
   lock_destroy(proc->e_lock);
