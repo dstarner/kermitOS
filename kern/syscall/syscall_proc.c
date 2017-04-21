@@ -80,15 +80,10 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	// Update status if status exists
 	*status = procs[pid]->exit_code;
 
-        //for (int fd=3;fd<OPEN_MAX; fd++) {
-        //  if (procs[pid]->f_table[fd] != NULL && procs[pid]->f_table[fd]->fh_lock != NULL) {
-        //    if (lock_do_i_hold(procs[pid]->f_table[fd]->fh_lock)) {
-        //      lock_release(procs[pid]->f_table[fd]->fh_lock);
-        //    }
-        //    lock_destroy(procs[pid]->f_table[fd]->fh_lock);
-        //  }
-        //  if (procs[pid]->f_table[fd] != NULL) {kfree(procs[pid]->f_table[fd]);}
-        //}
+        for (int fd=0; fd < 128; fd++) {
+          int error = 0;
+          sys_close(fd, &error);
+        }
 
 	// Release the lock
 	lock_release(procs[pid]->e_lock);
