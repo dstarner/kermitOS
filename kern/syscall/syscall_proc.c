@@ -81,8 +81,19 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int *err) {
 	*status = procs[pid]->exit_code;
 
         for (int fd=0; fd < 128; fd++) {
-          int error = 0;
-          sys_close(fd, &error);
+          if (procs[pid]->f_table[fd] == NULL) continue;
+
+          lock_acquire(procs[pid]->f_table[fd]->fh_lock);
+
+          procs[pid]->f_table[fd]->ref_count--;
+          
+          if (procs[pid]->f_table[fd]->ref_count == 0) {
+            vfs_close(procs[pid]->f_table[fd]->fh_vnode);
+            lock_release(procs[pid]->f_table[fd]->fh_lock);
+            lock_destroy(procs[pid]->f_table[fd]->fh_lock);
+          } else {
+            lock_release(procs[pid]->f_table[fd]->fh_lock);
+          }
         }
 
 	// Release the lock

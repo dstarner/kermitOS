@@ -344,6 +344,8 @@ int sys_close(int fd, int *err) {
   // Reduce the number of threads using it.
   curproc->f_table[fd]->ref_count--;
 
+  kprintf("%d:  %d\n", fd, curproc->f_table[fd]->ref_count);
+
   // If nothing else is using it.
   if (curproc->f_table[fd]->ref_count == 0) {
     // Clean up and close the vnode

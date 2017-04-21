@@ -51,6 +51,7 @@
 #include <vnode.h>
 #include <kern/errno.h>
 #include <syscall.h>
+#include <vfs.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -258,6 +259,22 @@ proc_destroy(struct proc *proc)
     }
     as_destroy(as);
   }
+
+  for (int fd=0; fd < 128; fd++) {
+          if (proc->f_table[fd] == NULL) continue;
+
+          lock_acquire(proc->f_table[fd]->fh_lock);
+
+          proc->f_table[fd]->ref_count--;
+
+          if (proc->f_table[fd]->ref_count == 0) {
+            vfs_close(proc->f_table[fd]->fh_vnode);
+            lock_release(proc->f_table[fd]->fh_lock);
+            lock_destroy(proc->f_table[fd]->fh_lock);
+          } else {
+            lock_release(proc->f_table[fd]->fh_lock);
+          }
+        }
 
   // Destroy the synch variables
   lock_destroy(proc->e_lock);
