@@ -168,14 +168,12 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
       new_page->ppage_n = getppages(1, false);
 
       if (new_page->ppage_n == 0) {
+        kfree(new_page);
         segment_destroy(new_seg);
         as_destroy(newas);
         return ENOMEM;
       }
 
-      // Move memsize
-      // Check if in memory or swapped.
-      // TODO:
       memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
              (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
 
