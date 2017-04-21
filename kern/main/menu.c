@@ -133,12 +133,12 @@ common_prog(int nargs, char **args)
 
 	tc = thread_count;
 
-        proc->parent_pid = curproc->pid;
+  proc->parent_pid = curproc->pid;
 
 	result = thread_fork(args[0] /* thread name */,
-			proc /* new process */,
-			cmd_progthread /* thread function */,
-			args /* thread arg */, nargs /* thread arg */);
+	proc /* new process */,
+	cmd_progthread /* thread function */,
+	args /* thread arg */, nargs /* thread arg */);
 	if (result) {
 		kprintf("thread_fork failed: %s\n", strerror(result));
 		proc_destroy(proc);
@@ -150,15 +150,13 @@ common_prog(int nargs, char **args)
 	 * once you write the code for handling that.
 	 */
 
-        int status, error;
+  int status, error;
 
-        sys_waitpid(proc->pid, &status, 0, &error);
+  sys_waitpid(proc->pid, &status, 0, &error);
 
 	// Wait for all threads to finish cleanup, otherwise khu be a bit behind,
 	// especially once swapping is enabled.
 	thread_wait_for_count(tc);
-
-        thread_wait_for_count(tc);
 
 
 	return 0;
