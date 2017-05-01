@@ -10,6 +10,11 @@
 #include <addrspace.h>
 #include <vm.h>
 #include <array.h>
+#include <vfs.h>
+#include <vnode.h>
+#include <stat.h>
+#include <bitmap.h>
+#include <device.h>
 
 /*
  * Wrap ram_stealmem in a spinlock.
@@ -100,9 +105,11 @@ void coremap_bootstrap() {
 void vm_bootstrap() {
 
   // Swap disk name
-  char * swap_disk_name = "lhd0.img";
+  const char * swap_disk_name = "lhd0raw:";
 
-  int vnode_fail = vfs_open(swap_disk_name, 111, 111, &(swap_vnode));
+  struct device * dev = kmalloc(sizeof(struct device));
+
+  int vnode_fail = vfs_adddev(swap_disk_name, dev, 1);
 
   // If we can't read the disk, then return
   if (vnode_fail) {
@@ -111,27 +118,32 @@ void vm_bootstrap() {
     return;
   }
 
+  swap_vnode = dev_create_vnode(dev);
+
   // Stat for checking size
   struct stat stats;
   int stat_failure = VOP_STAT(swap_vnode, &stats);;
   // Make connection to swap disk
   //   a. If can't read size, disable swapping
+
   if (stat_failure) {
     can_swap = false;
     vm_booted = true;
     return;
   }
+  
+
   //   b Else enable swapping
   can_swap = true;
 
   // If swapping, create bitmap size of disk / 4K (use vop_stat for size)
   off_t swap_disk_size = stats.st_size;
-  unsigned int pages_on_swap = swap_disk_size / PAGE_SIZE;
+  unsigned long pages_on_swap = swap_disk_size / PAGE_SIZE;
 
   if (pages_on_swap < 1) {
     can_swap = false;
     vm_booted = true;
-    return
+    return;
   }
 
   // Create the bitmap
