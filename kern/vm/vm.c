@@ -15,6 +15,7 @@
 #include <stat.h>
 #include <bitmap.h>
 #include <device.h>
+#include <kern/fcntl.h>
 
 /*
  * Wrap ram_stealmem in a spinlock.
@@ -105,11 +106,9 @@ void coremap_bootstrap() {
 void vm_bootstrap() {
 
   // Swap disk name
-  const char * swap_disk_name = "lhd0raw:";
+  char * swap_disk_name = (char *) "lhd0raw:";
 
-  struct device * dev = kmalloc(sizeof(struct device));
-
-  int vnode_fail = vfs_adddev(swap_disk_name, dev, 1);
+  int vnode_fail = vfs_open(swap_disk_name, O_RDWR, 0664, &(swap_vnode)); 
 
   // If we can't read the disk, then return
   if (vnode_fail) {
@@ -117,10 +116,6 @@ void vm_bootstrap() {
     vm_booted = true;
     return;
   }
-
-  kprintf("\nBlocks in Device: %lu\n", (unsigned long) dev->d_blocks);
-
-  swap_vnode = dev_create_vnode(dev);
 
   // Stat for checking size
   struct stat stats;
@@ -141,9 +136,7 @@ void vm_bootstrap() {
 
   // If swapping, create bitmap size of disk / 4K (use vop_stat for size)
   off_t swap_disk_size = stats.st_size;
-  kprintf("\n%lld\n\n", (long long) swap_disk_size);
   unsigned long pages_on_swap = swap_disk_size / PAGE_SIZE;
-  kprintf("\n--> %lu\n\n", pages_on_swap);
 
   if (pages_on_swap < 1) {
     can_swap = false;
