@@ -88,6 +88,7 @@ void coremap_bootstrap() {
   for (unsigned int i=0; i<COREMAP_PAGES; i++) {
     coremap[i].state = FREE;
     coremap[i].block_size = 0;
+    coremap[i].owner = NULL;
   }
 
   vm_booted = false;
@@ -215,6 +216,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
         page->state = CLEAN; // If a page is writable then assume it's dirty.
+        set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
       }
@@ -244,6 +246,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
+        set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
 
@@ -502,4 +505,13 @@ unsigned int coremap_used_bytes() {
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown(const struct tlbshootdown * shootdown) {
   (void) shootdown;
+}
+
+void set_page_owner(struct page_entry * page, paddr_t address) {
+  unsigned long page_num = (address - coremap_pagestartaddr) / PAGE_SIZE;
+
+  // Make sure that the page is actually allocated
+  KASSERT(coremap[page_num].state != FREE);
+
+  coremap[page_num].owner = page;
 }

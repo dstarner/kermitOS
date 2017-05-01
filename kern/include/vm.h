@@ -43,6 +43,8 @@ struct coremap_page {
     // Current state of this block
     enum stateEnum {FREE, KERNEL, USER} state;
 
+    struct page_entry * owner;
+
     // Series of blocks following this page:
     unsigned long block_size;
 };
@@ -87,6 +89,9 @@ struct page_entry * find_page_on_segment(struct segment_entry *, vaddr_t);
 
 /* Helper function to get 'n' number of physical pages */
 paddr_t getppages(unsigned long, bool);
+
+void set_page_owner(struct page_entry *, paddr_t);
+
 /* Free page */
 void freeppage(paddr_t);
 
