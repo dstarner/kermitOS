@@ -49,14 +49,16 @@ struct page_entry {
   // State of the page
   enum pageStateEnum {DIRTY, CLEAN} state;
 
+  enum swapStateEnum {MEMORY, DISK} swap_state;
+
   // Virtual page this maps to
   vaddr_t vpage_n;
 
   // Physical Page this maps to
   paddr_t ppage_n;
 
-  // This will also need the location on disk
-  // TODO
+  // This will also need the location on disk (if on disk)
+  unsigned long bitmap_disk_index;
 
 };
 
