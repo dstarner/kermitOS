@@ -118,10 +118,13 @@ void vm_bootstrap() {
     return;
   }
 
+  kprintf("\nBlocks in Device: %lu\n", (unsigned long) dev->d_blocks);
+
   swap_vnode = dev_create_vnode(dev);
 
   // Stat for checking size
   struct stat stats;
+
   int stat_failure = VOP_STAT(swap_vnode, &stats);;
   // Make connection to swap disk
   //   a. If can't read size, disable swapping
@@ -138,7 +141,9 @@ void vm_bootstrap() {
 
   // If swapping, create bitmap size of disk / 4K (use vop_stat for size)
   off_t swap_disk_size = stats.st_size;
+  kprintf("\n%lld\n\n", (long long) swap_disk_size);
   unsigned long pages_on_swap = swap_disk_size / PAGE_SIZE;
+  kprintf("\n--> %lu\n\n", pages_on_swap);
 
   if (pages_on_swap < 1) {
     can_swap = false;
