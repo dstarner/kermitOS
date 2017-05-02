@@ -108,7 +108,7 @@ void vm_bootstrap() {
   // Swap disk name
   char * swap_disk_name = (char *) "lhd0raw:";
 
-  int vnode_fail = vfs_open(swap_disk_name, O_RDWR, 0664, &(swap_vnode)); 
+  int vnode_fail = vfs_open(swap_disk_name, O_RDWR, 0664, &(swap_vnode));
 
   // If we can't read the disk, then return
   if (vnode_fail) {
@@ -129,23 +129,23 @@ void vm_bootstrap() {
     vm_booted = true;
     return;
   }
-  
+
 
   //   b Else enable swapping
   can_swap = true;
 
   // If swapping, create bitmap size of disk / 4K (use vop_stat for size)
   off_t swap_disk_size = stats.st_size;
-  unsigned long pages_on_swap = swap_disk_size / PAGE_SIZE;
+  swap_disk_pages = swap_disk_size / PAGE_SIZE;
 
-  if (pages_on_swap < 1) {
+  if (swap_disk_pages < 1) {
     can_swap = false;
     vm_booted = true;
     return;
   }
 
   // Create the bitmap
-  disk_bitmap = bitmap_create(pages_on_swap);
+  disk_bitmap = bitmap_create(swap_disk_pages);
   // Set up bitmap
   KASSERT(disk_bitmap != NULL);
 
@@ -154,6 +154,18 @@ void vm_bootstrap() {
 
   // Make sure we really booted
   KASSERT(vm_booted); // wot
+}
+
+int blockread(struct page_entry * page) {
+  // This will swap in the page. It is also responsible for changing the page
+  // swap state
+  (void) page;
+  return 0;
+}
+
+int blockwrite(struct page_entry * page) {
+  (void) page;
+  return 0;
 }
 
 /* Fault handling function called by trap code */
@@ -278,6 +290,13 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     default:
       return EINVAL;
   } // End of case switch
+
+  // If the page is on disk
+  if (page->swap_state == DISK) {
+    // SWAP!
+    int error = blockread(page);
+    KASSERT(error == 0);
+  }
 
   // At this point the paddr needs to exist or else it would not have gotten
   // this far.
@@ -425,7 +444,9 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
     spinlock_release(&coremap_lock);
   }
 
-  // If not enough pages are found, return 0
+  // If not enough pages are found, swapout!
+  // uint32_t random_page = random() % swap_disk_pages;
+
   return 0;
 }
 

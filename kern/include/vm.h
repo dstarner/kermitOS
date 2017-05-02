@@ -59,6 +59,12 @@ paddr_t coremap_pagestartaddr;
 struct vnode * swap_vnode;
 struct bitmap * disk_bitmap;
 bool can_swap;
+unsigned long swap_disk_pages;
+
+/* Swap in */
+int blockread(struct page_entry *);
+
+int blockwrite(struct page_entry *);
 
 // The number of pages in the coremap
 unsigned int COREMAP_PAGES;
