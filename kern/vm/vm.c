@@ -158,7 +158,7 @@ void vm_bootstrap() {
 }
 
 int block_read(int swap_disk_index, unsigned long coremap_index) {
-  
+
 }
 
 int block_write(int swap_disk_index, unsigned long coremap_index) {
