@@ -485,6 +485,7 @@ void * sys_sbrk(intptr_t amt, int *err) {
       // kprintf("freeing paddr %x, ", page->ppage_n);
       // kprintf("freeing vaddr %x\n", page->vpage_n);
       freeppage(page->ppage_n);
+      lock_destroy(page->swap_lock);
       kfree(page);
       array_remove(seg->page_table, page_i);
     }
