@@ -157,7 +157,7 @@ void vm_bootstrap() {
   KASSERT(vm_booted); // wot
 }
 
-int block_read(int swap_disk_index, unsigned long coremap_index) {
+int block_read(int swap_disk_index, paddr_t write_to_paddr) {
   // Check if the bitmap is set. Blocks can only be read if the bitmap is set.
   KASSERT(bitmap_isset(disk_bitmap, swap_disk_index));
 
@@ -167,7 +167,7 @@ int block_read(int swap_disk_index, unsigned long coremap_index) {
   int remaining = PAGE_SIZE; // The remaining bytes to read (these are pages)
 
   // Determine where to store the data being read.
-  reader_iovec.iov_ubase = (void *) coremap_index * PAGE_SIZE + coremap_pagestartaddr;
+  reader_iovec.iov_ubase = (void *) write_to_addr;
   reader_iovec.iov_len = PAGE_SIZE;
 
   reader_uio.uio_iov = &reader_iovec;
@@ -186,11 +186,14 @@ int block_read(int swap_disk_index, unsigned long coremap_index) {
 
   // Start reading.
   lock_acquire(coremap[coremap_index].owner->swap_lock);
+
+
+
   lock_release(coremap[coremap_index].owner->swap_lock);
 
 }
 
-int block_write(int swap_disk_index, unsigned long coremap_index) {
+int block_write(int swap_disk_index, paddr_t read_from_paddr) {
 
 }
 
