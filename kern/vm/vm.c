@@ -243,6 +243,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
         page->state = CLEAN; // If a page is writable then assume it's dirty.
+        page->disk_bitmap_index = 0;
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
@@ -273,6 +274,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
+        page->disk_bitmap_index = 0;
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);

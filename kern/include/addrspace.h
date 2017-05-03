@@ -51,6 +51,8 @@ struct page_entry {
 
   enum swapStateEnum {MEMORY, DISK} swap_state;
 
+  unsigned long disk_bitmap_index;
+
   // Virtual page this maps to
   vaddr_t vpage_n;
 
