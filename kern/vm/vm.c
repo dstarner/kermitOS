@@ -157,6 +157,35 @@ void vm_bootstrap() {
 }
 
 int block_read(int swap_disk_index, unsigned long coremap_index) {
+  // Check if the bitmap is set. Blocks can only be read if the bitmap is set.
+  KASSERT(bitmap_isset(disk_bitmap, swap_disk_index));
+
+  // Create UIO and IOVec
+  struct uio reader_uio;
+  struct iovec reader_iovec;
+  int remaining = PAGE_SIZE; // The remaining bytes to read (these are pages)
+
+  // Determine where to store the data being read.
+  reader_iovec.iov_ubase = (void *) coremap_index * PAGE_SIZE + coremap_pagestartaddr;
+  reader_iovec.iov_len = PAGE_SIZE;
+
+  reader_uio.uio_iov = &reader_iovec;
+  reader_uio.uio_iovcnt = 1;
+
+  // Set up for reading
+  reader_uio.uio_rw = UIO_READ;
+  reader_uio.uio_segflg = UIO_USERSPACE;
+  reader_uio.uio_resid = buflen;
+
+  // There is no address space for this read operation.
+  reader_uio.uio_space = NULL;
+
+  // Find the offset of the page stored in the swapdisk
+  reader_uio.uio_offset = swap_disk_index * PAGE_SIZE;
+
+  // Start reading.
+  lock_acquire();
+  lock_release();
 
 }
 
