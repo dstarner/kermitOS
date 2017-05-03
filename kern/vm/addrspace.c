@@ -179,8 +179,12 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
       new_page->swap_lock = lock_create("swap_lock");
       KASSERT(new_page->swap_lock != NULL);
 
-      memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
-             (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
+      if (old_page->swap_state == DISK) {
+        block_read(old_page->bitmap_disk_index, new_page->ppage_n);
+      } else {
+        memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
+              (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
+      }
 
       array_add(new_seg->page_table, new_page, NULL);
     }
