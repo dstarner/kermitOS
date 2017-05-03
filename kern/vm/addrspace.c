@@ -134,6 +134,7 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
     new_seg->writeable = old_seg->writeable;
     new_seg->readable = old_seg->readable;
     new_seg->executable = old_seg->executable;
+    new_seg->isHeap = old_seg->isHeap;
 
     //kprintf("COPY ");
     //if (new_seg->executable) {kprintf("CODE/TEXT: Executable, ");}
