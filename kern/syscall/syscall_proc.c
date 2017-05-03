@@ -373,19 +373,19 @@ void sys_exit(int exit_code, bool fatal_signal) {
     int error = 0;
     sys_close(fd, &error);
 
-  } 
+  }
 
   if (curproc->pid == 1) {
-  
+
     for (int fd=0; fd < 3; fd++) {
       if (curproc->f_table[fd] == NULL) continue;
       lock_acquire(curproc->f_table[fd]->fh_lock);
       vfs_close(curproc->f_table[fd]->fh_vnode);
       lock_release(curproc->f_table[fd]->fh_lock);
-      lock_destroy(curproc->f_table[fd]->fh_lock);      
+      lock_destroy(curproc->f_table[fd]->fh_lock);
       kfree(curproc->f_table[fd]);
       curproc->f_table[fd] = NULL;
-    } 
+    }
 
   }
 
@@ -409,9 +409,12 @@ void sys_exit(int exit_code, bool fatal_signal) {
 void * sys_sbrk(intptr_t amt, int *err) {
   KASSERT(curproc != NULL);
 
+  lock_acquire(curproc->sbrk_lock);
   struct segment_entry * seg = find_heap_segment();
+
   if (seg == NULL) {
     *err = EFAULT;
+		lock_release(curproc->sbrk_lock);
     return ((void *) -1);
   }
 
@@ -419,7 +422,7 @@ void * sys_sbrk(intptr_t amt, int *err) {
   // that if you have a multithreaded process, simultaneous calls to sbrk from
   // different threads should not interfere with each other and should update
   // the "break" state atomically.
-  lock_acquire(curproc->sbrk_lock);
+
 
   vaddr_t old_break = seg->region_start + seg->region_size;
   if (amt == 0) {
@@ -485,6 +488,7 @@ void * sys_sbrk(intptr_t amt, int *err) {
       // kprintf("freeing paddr %x, ", page->ppage_n);
       // kprintf("freeing vaddr %x\n", page->vpage_n);
       freeppage(page->ppage_n);
+      lock_destroy(page->swap_lock);
       kfree(page);
       array_remove(seg->page_table, page_i);
     }
