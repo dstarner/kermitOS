@@ -159,7 +159,7 @@ void vm_bootstrap() {
   KASSERT(vm_booted); // wot
 }
 
-int block_read(int swap_disk_index, paddr_t write_to_paddr) {
+int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
   // Check if the bitmap is set. Blocks can only be read if the bitmap is set.
   KASSERT(bitmap_isset(disk_bitmap, swap_disk_index));
 
@@ -202,7 +202,7 @@ int block_read(int swap_disk_index, paddr_t write_to_paddr) {
 }
 
 
-int block_write(int swap_disk_index, paddr_t read_from_paddr) {
+int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
   // Check if the bitmap is set. Blocks can only be written to disk if the bitmap is not set.
   KASSERT(!bitmap_isset(disk_bitmap, swap_disk_index));
 
