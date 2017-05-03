@@ -12,3 +12,4 @@ build
 *.swp
 .idea
 memtest.py
+LHD0.img
