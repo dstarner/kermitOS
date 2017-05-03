@@ -37,6 +37,7 @@
 #include <proc.h>
 #include <array.h>
 #include <current.h>
+#include <bitmap.h>
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -369,7 +370,11 @@ void segment_destroy(struct segment_entry * segment) {
 
     // Free the page, and then free the actual structure
     lock_destroy(page->swap_lock);
-    freeppage(page->ppage_n);
+    if (page->swap_state == MEMORY) {
+      freeppage(page->ppage_n);
+    } else {
+      bitmap_unmark(disk_bitmap, page->bitmap_disk_index);
+    }
     kfree(page);
   }
 
