@@ -273,6 +273,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = CLEAN; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
+        page->swap_lock = lock_create('shwap lawk');
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
@@ -304,6 +305,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
+        page->swap_lock = lock_create('shwap lawk');
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
