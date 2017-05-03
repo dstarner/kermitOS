@@ -378,6 +378,7 @@ void sys_exit(int exit_code, bool fatal_signal) {
   if (curproc->pid == 1) {
   
     for (int fd=0; fd < 3; fd++) {
+      if (curproc->f_table[fd] == NULL) continue;
       lock_acquire(curproc->f_table[fd]->fh_lock);
       vfs_close(curproc->f_table[fd]->fh_vnode);
       lock_release(curproc->f_table[fd]->fh_lock);

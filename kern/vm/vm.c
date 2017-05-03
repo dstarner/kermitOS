@@ -160,8 +160,6 @@ void vm_bootstrap() {
 }
 
 int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
-  // Check if the bitmap is set. Blocks can only be read if the bitmap is set.
-  KASSERT(bitmap_isset(disk_bitmap, swap_disk_index));
 
   // Create UIO and IOVec
   struct uio reader_uio;
@@ -203,8 +201,6 @@ int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
 
 
 int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
-  // Check if the bitmap is set. Blocks can only be written to disk if the bitmap is not set.
-  KASSERT(!bitmap_isset(disk_bitmap, swap_disk_index));
 
   // Create UIO and IOVec
   struct uio writer_uio;
