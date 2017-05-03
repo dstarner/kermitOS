@@ -58,6 +58,7 @@ paddr_t coremap_pagestartaddr;
 // Swap stuff
 struct vnode * swap_vnode;
 struct bitmap * disk_bitmap;
+struct lock * bitmap_lock;
 bool can_swap;
 unsigned long swap_disk_pages;
 

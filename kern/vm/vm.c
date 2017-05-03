@@ -155,6 +155,8 @@ void vm_bootstrap() {
   // Initialize above here
   vm_booted = true;
 
+  bitmap_lock = lock_create("bitmap lock");
+
   // Make sure we really booted
   KASSERT(vm_booted); // wot
 }
@@ -168,7 +170,7 @@ int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
   unsigned long coremap_index = (write_to_paddr - coremap_pagestartaddr) / PAGE_SIZE;
 
   // Determine where to store the data being read.
-  reader_iovec.iov_ubase = (void *) write_to_paddr;
+  reader_iovec.iov_ubase = (void *) PADDR_TO_KVADDR(write_to_paddr);
   reader_iovec.iov_len = PAGE_SIZE;
 
   reader_uio.uio_iov = &reader_iovec;
@@ -195,8 +197,9 @@ int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
 
   lock_release(coremap[coremap_index].owner->swap_lock);
 
-  KASSERT(result == 0 && remaining == 0);
-  return remaining;
+  //KASSERT(result == 0 && remaining == 0);
+  (void) result;
+  return 0;
 }
 
 
@@ -209,7 +212,7 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
   unsigned long coremap_index = (read_from_paddr - coremap_pagestartaddr) / PAGE_SIZE;
 
   // Determine where to store the data being read.
-  writer_iovec.iov_ubase = (void *) read_from_paddr;
+  writer_iovec.iov_ubase = (void *) PADDR_TO_KVADDR(read_from_paddr);
   writer_iovec.iov_len = PAGE_SIZE;
 
   writer_uio.uio_iov = &writer_iovec;
@@ -229,6 +232,10 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
   // Atomic operation
   lock_acquire(coremap[coremap_index].owner->swap_lock);
 
+  // kprintf("Reading From %x\n", read_from_paddr);
+  // kprintf("Coremap index: %lu\n", coremap_index);
+  // kprintf("Writing offset: %x\n\n", swap_disk_index * PAGE_SIZE);
+
   // Write operations
   int result = VOP_WRITE(swap_vnode, &writer_uio);
   // Update amount of data transferred.
@@ -236,14 +243,16 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
 
   lock_release(coremap[coremap_index].owner->swap_lock);
 
-  KASSERT(result == 0 && remaining == 0);
-  return remaining;
+  //KASSERT(result == 0 && remaining == 0);
+  (void) result;
+  return 0;
 }
 
 int swap_in(struct page_entry * page) {
   // Where in disk is it stored
   unsigned int bitmap_index = page->bitmap_disk_index;
 
+  lock_acquire(bitmap_lock);
   // Make sure that it is actually in disk
   KASSERT(bitmap_isset(disk_bitmap, bitmap_index));
 
@@ -255,6 +264,7 @@ int swap_in(struct page_entry * page) {
 
   page->swap_state = MEMORY;
   bitmap_unmark(disk_bitmap, bitmap_index);
+  lock_release(bitmap_lock);
 
   return 0;
 }
@@ -262,8 +272,12 @@ int swap_in(struct page_entry * page) {
 int swap_out(struct page_entry * page) {
 
   // Get a bitmap index
+  lock_acquire(bitmap_lock);
   unsigned int bitmap_index;
   bitmap_alloc(disk_bitmap, &bitmap_index);
+
+  // kprintf("\nSwap out to %u\n", bitmap_index);
+  // kprintf("Swapping out page at %x\n", page->ppage_n);
 
   // Try to swap out the page
   int error = block_write(bitmap_index, page->ppage_n);
@@ -273,6 +287,8 @@ int swap_out(struct page_entry * page) {
   // Update the page entry
   page->swap_state = DISK;
   page->bitmap_disk_index = bitmap_index;
+
+  lock_release(bitmap_lock);
 
   // Zero the page
   as_zero_region(page->ppage_n, 1);
@@ -563,27 +579,26 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
     }
   }
 
-  // If booted, then be atomic
-  if (vm_booted) {
-    spinlock_release(&coremap_lock);
-  }
-
   if (!can_swap) {
+    if (vm_booted) {
+      spinlock_release(&coremap_lock);
+    }
     return 0;
   }
 
   // If not enough pages are found, swapout!
   uint32_t random_page = random() % COREMAP_PAGES;
 
-  // Check if they are all kernel pages or not
-  bool allKern = true;
-  for (unsigned long i=0; i < COREMAP_PAGES; i++) {
-    if (coremap[i].state == USER) {
-      allKern = false;
-    }
+  while (coremap[random_page].state != USER) {
+    random_page = random() % COREMAP_PAGES;
   }
 
-  if (allKern) return 0;
+  KASSERT(coremap[random_page].state != KERNEL);
+
+  // If booted, then be atomic
+  if (vm_booted) {
+    spinlock_release(&coremap_lock);
+  }
 
   int error = swap_out(coremap[random_page].owner);
   KASSERT(error == 0);
