@@ -61,8 +61,8 @@ struct bitmap * disk_bitmap;
 bool can_swap;
 unsigned long swap_disk_pages;
 
-int block_read(int, struct page_entry *);
-int block_write(int, struct page_entry *);
+int block_read(int, unsigned long);
+int block_write(int, unsigned long);
 int swap_in(struct page_entry *);
 int swap_out(struct page_entry *);
 
