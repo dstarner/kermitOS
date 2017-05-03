@@ -17,6 +17,8 @@
 #include <device.h>
 #include <kern/fcntl.h>
 #include <lib.h>
+#include <uio.h>
+#include <kern/iovec.h>
 
 /*
  * Wrap ram_stealmem in a spinlock.
@@ -157,7 +159,7 @@ void vm_bootstrap() {
   KASSERT(vm_booted); // wot
 }
 
-int block_read(int swap_disk_index, unsigned long coremap_index) {
+int block_read(int swap_disk_index, paddr_t write_to_paddr) {
   // Check if the bitmap is set. Blocks can only be read if the bitmap is set.
   KASSERT(bitmap_isset(disk_bitmap, swap_disk_index));
 
@@ -165,9 +167,10 @@ int block_read(int swap_disk_index, unsigned long coremap_index) {
   struct uio reader_uio;
   struct iovec reader_iovec;
   int remaining = PAGE_SIZE; // The remaining bytes to read (these are pages)
+  unsigned long coremap_index = (write_to_paddr - coremap_pagestartaddr) / PAGE_SIZE;
 
   // Determine where to store the data being read.
-  reader_iovec.iov_ubase = (void *) coremap_index * PAGE_SIZE + coremap_pagestartaddr;
+  reader_iovec.iov_ubase = (void *) write_to_paddr;
   reader_iovec.iov_len = PAGE_SIZE;
 
   reader_uio.uio_iov = &reader_iovec;
@@ -175,8 +178,8 @@ int block_read(int swap_disk_index, unsigned long coremap_index) {
 
   // Set up for reading
   reader_uio.uio_rw = UIO_READ;
-  reader_uio.uio_segflg = UIO_KERNELSPACE;
-  reader_uio.uio_resid = buflen;
+  reader_uio.uio_segflg = UIO_SYSSPACE;
+  reader_uio.uio_resid = PAGE_SIZE;
 
   // There is no address space for this read operation.
   reader_uio.uio_space = NULL;
@@ -186,14 +189,22 @@ int block_read(int swap_disk_index, unsigned long coremap_index) {
 
   // Start reading.
   lock_acquire(coremap[coremap_index].owner->swap_lock);
+
+  (void) reader_uio;
+  (void) reader_iovec;
+
+  remaining -= reader_uio.uio_resid;
+
+
   lock_release(coremap[coremap_index].owner->swap_lock);
 
-  return 0;
+  return remaining;
 }
 
-int block_write(int swap_disk_index, unsigned long coremap_index) {
+
+int block_write(int swap_disk_index, paddr_t read_from_paddr) {
   (void) swap_disk_index;
-  (void) coremap_index;
+  (void) read_from_paddr;
   return 0;
 }
 
@@ -204,7 +215,7 @@ int swap_in(struct page_entry * page) {
   // Make sure that it is actually in disk
   KASSERT(bitmap_isset(disk_bitmap, bitmap_index));
 
-  int error = blockread(bitmap_index, page->ppage_n);
+  int error = block_read(bitmap_index, page->ppage_n);
 
   // Make sure we did this right
   KASSERT(error == 0);
@@ -291,6 +302,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = CLEAN; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
+        page->swap_lock = lock_create("swap_lock");
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
@@ -322,6 +334,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
+        page->swap_lock = lock_create("swap_lock");
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
