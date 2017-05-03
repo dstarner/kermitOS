@@ -156,11 +156,11 @@ void vm_bootstrap() {
   KASSERT(vm_booted); // wot
 }
 
-block_read(int index) {
+int block_read(int swap_disk_index, struct page_entry * page_out) {
 
 }
 
-block_write(int index, data) {
+int block_write(int swap_disk_index, struct page_entry * page_in) {
 
 }
 
