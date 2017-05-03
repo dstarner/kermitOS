@@ -199,6 +199,7 @@ int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
 
   //KASSERT(result == 0 && remaining == 0);
   (void) result;
+  (void) remaining;
   return 0;
 }
 
@@ -238,13 +239,12 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
 
   // Write operations
   int result = VOP_WRITE(swap_vnode, &writer_uio);
-  // Update amount of data transferred.
-  remaining -= writer_uio.uio_resid;
 
   lock_release(coremap[coremap_index].owner->swap_lock);
 
-  //KASSERT(result == 0 && remaining == 0);
+  KASSERT(result == 0 && writer_uio.uio_resid == 0);
   (void) result;
+  (void) remaining;
   return 0;
 }
 
