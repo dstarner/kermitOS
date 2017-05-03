@@ -174,7 +174,7 @@ int block_read(int swap_disk_index, unsigned long coremap_index) {
 
   // Set up for reading
   reader_uio.uio_rw = UIO_READ;
-  reader_uio.uio_segflg = UIO_USERSPACE;
+  reader_uio.uio_segflg = UIO_KERNELSPACE;
   reader_uio.uio_resid = buflen;
 
   // There is no address space for this read operation.
@@ -184,8 +184,8 @@ int block_read(int swap_disk_index, unsigned long coremap_index) {
   reader_uio.uio_offset = swap_disk_index * PAGE_SIZE;
 
   // Start reading.
-  lock_acquire();
-  lock_release();
+  lock_acquire(coremap[coremap_index].owner->swap_lock);
+  lock_release(coremap[coremap_index].owner->swap_lock);
 
 }
 
