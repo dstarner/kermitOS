@@ -187,25 +187,61 @@ int block_read(int swap_disk_index, paddr_t write_to_paddr) {
   // Find the offset of the page stored in the swapdisk
   reader_uio.uio_offset = swap_disk_index * PAGE_SIZE;
 
-  // Start reading.
+  // Atomic operation
   lock_acquire(coremap[coremap_index].owner->swap_lock);
 
-  (void) reader_uio;
-  (void) reader_iovec;
-
+  // Read operations
+  int result = VOP_READ(swap_vnode, &reader_uio);
+  // Update amount of data transferred.
   remaining -= reader_uio.uio_resid;
-
 
   lock_release(coremap[coremap_index].owner->swap_lock);
 
+  KASSERT(result == 0 && remaining == 0);
   return remaining;
 }
 
 
 int block_write(int swap_disk_index, paddr_t read_from_paddr) {
-  (void) swap_disk_index;
-  (void) read_from_paddr;
-  return 0;
+  // Check if the bitmap is set. Blocks can only be written to disk if the bitmap is not set.
+  KASSERT(!bitmap_isset(disk_bitmap, swap_disk_index));
+
+  // Create UIO and IOVec
+  struct uio writer_uio;
+  struct iovec writer_iovec;
+  int remaining = PAGE_SIZE; // The remaining bytes to read (these are pages)
+  unsigned long coremap_index = (read_from_paddr - coremap_pagestartaddr) / PAGE_SIZE;
+
+  // Determine where to store the data being read.
+  writer_iovec.iov_ubase = (void *) read_from_paddr;
+  writer_iovec.iov_len = PAGE_SIZE;
+
+  writer_uio.uio_iov = &writer_iovec;
+  writer_uio.uio_iovcnt = 1;
+
+  // Set up for writing
+  writer_uio.uio_rw = UIO_WRITE;
+  writer_uio.uio_segflg = UIO_SYSSPACE;
+  writer_uio.uio_resid = PAGE_SIZE;
+
+  // There is no address space for this read operation.
+  writer_uio.uio_space = NULL;
+
+  // Find the offset of the page stored in the swapdisk
+  writer_uio.uio_offset = swap_disk_index * PAGE_SIZE;
+
+  // Atomic operation
+  lock_acquire(coremap[coremap_index].owner->swap_lock);
+
+  // Write operations
+  int result = VOP_WRITE(swap_vnode, &writer_uio);
+  // Update amount of data transferred.
+  remaining -= writer_uio.uio_resid;
+
+  lock_release(coremap[coremap_index].owner->swap_lock);
+
+  KASSERT(result == 0 && remaining == 0);
+  return remaining;
 }
 
 int swap_in(struct page_entry * page) {
