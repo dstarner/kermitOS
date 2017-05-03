@@ -158,15 +158,26 @@ void vm_bootstrap() {
 }
 
 int block_read(int swap_disk_index, unsigned long coremap_index) {
-
+  (void) swap_disk_index;
+  (void) coremap_index;
+  return 0;
 }
 
 int block_write(int swap_disk_index, unsigned long coremap_index) {
-
+  (void) swap_disk_index;
+  (void) coremap_index;
+  return 0;
 }
 
 int swap_in(struct page_entry * page) {
-  (void) page;
+  // Where in disk is it stored
+  unsigned long bitmap_index = page->bitmap_disk_index;
+
+  // Make sure that it is actually in disk
+  KASSERT(bitmap_isset(disk_bitmap, bitmap_index));
+
+  int error = blockread(bitmap_index, page->ppage_n)
+
   return 0;
 }
 

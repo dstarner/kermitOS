@@ -60,8 +60,6 @@ struct page_entry {
   // This will also need the location on disk (if on disk)
   unsigned long bitmap_disk_index;
 
-  struct lock * swap_lock;
-
 };
 
 struct segment_entry {
