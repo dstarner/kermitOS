@@ -356,6 +356,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->state = CLEAN; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
         page->swap_lock = lock_create("swap_lock");
+        page->swap_state = MEMORY;
+        KASSERT(page->swap_lock != NULL);
+
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
@@ -388,6 +391,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->state = DIRTY; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
         page->swap_lock = lock_create("swap_lock");
+        KASSERT(page->swap_lock != NULL);
+        page->swap_state = MEMORY;
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
@@ -413,6 +418,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
   // If the page is on disk
   if (page->swap_state == DISK) {
+
+    KASSERT(can_swap);
+
     // SWAP!
     int error = swap_in(page);
     KASSERT(error == 0);
@@ -564,12 +572,28 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
     spinlock_release(&coremap_lock);
   }
 
+  if (!can_swap) {
+    return 0;
+  }
+
   // If not enough pages are found, swapout!
   uint32_t random_page = random() % COREMAP_PAGES;
+
+  // Check if they are all kernel pages or not
+  bool allKern = true;
+  for (unsigned long i=0; i < COREMAP_PAGES; i++) {
+    if (coremap[i].state == USER) {
+      allKern = false;
+    }
+  }
+
+  if (allKern) return 0;
+
   int error = swap_out(coremap[random_page].owner);
   KASSERT(error == 0);
 
   paddr_t paddr = (random_page * PAGE_SIZE) + coremap_pagestartaddr;
+  KASSERT(can_swap);
 
   return paddr;
 }

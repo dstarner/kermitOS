@@ -174,6 +174,9 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
         return ENOMEM;
       }
 
+      new_page->swap_lock = lock_create("swap_lock");
+      KASSERT(new_page->swap_lock != NULL);
+
       memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
              (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
 
