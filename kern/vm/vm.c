@@ -16,6 +16,7 @@
 #include <bitmap.h>
 #include <device.h>
 #include <kern/fcntl.h>
+#include <lib.h>
 
 /*
  * Wrap ram_stealmem in a spinlock.
@@ -194,6 +195,7 @@ int block_write(int swap_disk_index, unsigned long coremap_index) {
 }
 
 int swap_in(struct page_entry * page) {
+  (void) page;
   return 0;
 }
 
@@ -273,7 +275,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = CLEAN; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
-        page->swap_lock = lock_create('shwap lawk');
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
@@ -305,7 +306,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
-        page->swap_lock = lock_create('shwap lawk');
         set_page_owner(page, paddr);
 
         array_add(seg->page_table, page, NULL);
@@ -332,7 +332,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // If the page is on disk
   if (page->swap_state == DISK) {
     // SWAP!
-    int error = block_read(page);
+    int error = swap_in(page);
     KASSERT(error == 0);
   }
 
@@ -483,9 +483,13 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
   }
 
   // If not enough pages are found, swapout!
-  // uint32_t random_page = random() % swap_disk_pages;
+  uint32_t random_page = random() % COREMAP_PAGES;
+  int error = swap_out(coremap[random_page].owner);
+  KASSERT(error == 0);
 
-  return 0;
+  paddr_t paddr = (random_page * PAGE_SIZE) + coremap_pagestartaddr;
+
+  return paddr;
 }
 
 
