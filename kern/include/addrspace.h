@@ -58,7 +58,7 @@ struct page_entry {
   paddr_t ppage_n;
 
   // This will also need the location on disk (if on disk)
-  unsigned long bitmap_disk_index;
+  unsigned int bitmap_disk_index;
 
   struct lock * swap_lock;
 

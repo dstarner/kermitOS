@@ -210,11 +210,12 @@ int block_write(int swap_disk_index, paddr_t read_from_paddr) {
 
 int swap_in(struct page_entry * page) {
   // Where in disk is it stored
-  unsigned long bitmap_index = page->bitmap_disk_index;
+  unsigned int bitmap_index = page->bitmap_disk_index;
 
   // Make sure that it is actually in disk
   KASSERT(bitmap_isset(disk_bitmap, bitmap_index));
 
+  // Try to swap in
   int error = block_read(bitmap_index, page->ppage_n);
 
   // Make sure we did this right
@@ -227,7 +228,23 @@ int swap_in(struct page_entry * page) {
 }
 
 int swap_out(struct page_entry * page) {
-  (void) page;
+
+  // Get a bitmap index
+  unsigned int bitmap_index;
+  bitmap_alloc(disk_bitmap, &bitmap_index);
+
+  // Try to swap out the page
+  int error = block_write(bitmap_index, page->ppage_n);
+
+  KASSERT(error == 0);
+
+  // Update the page entry
+  page->swap_state = DISK;
+  page->bitmap_disk_index = bitmap_index;
+
+  // Zero the page
+  as_zero_region(page->ppage_n, 1);
+
   return 0;
 }
 
