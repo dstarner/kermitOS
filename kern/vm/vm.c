@@ -156,14 +156,19 @@ void vm_bootstrap() {
   KASSERT(vm_booted); // wot
 }
 
-int blockread(struct page_entry * page) {
-  // This will swap in the page. It is also responsible for changing the page
-  // swap state
-  (void) page;
+block_read(int index) {
+
+}
+
+block_write(int index, data) {
+
+}
+
+int swap_in(struct page_entry * page) {
   return 0;
 }
 
-int blockwrite(struct page_entry * page) {
+int swap_out(struct page_entry * page) {
   (void) page;
   return 0;
 }
@@ -294,7 +299,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // If the page is on disk
   if (page->swap_state == DISK) {
     // SWAP!
-    int error = blockread(page);
+    int error = block_read(page);
     KASSERT(error == 0);
   }
 
