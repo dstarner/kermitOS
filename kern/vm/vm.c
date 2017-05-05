@@ -330,6 +330,7 @@ int swap_out(struct page_entry * page) {
   // Update the page entry
   page->swap_state = DISK;
   page->bitmap_disk_index = bitmap_index;
+
   // Zero the page
   as_zero_region(page->ppage_n, 1);
 
@@ -389,7 +390,10 @@ uint32_t select_page_to_evict_clock_lru() {
 
   // Unset all the page's pointers here.
   for (unsigned int i = 0; i < COREMAP_PAGES; i++) {
-    coremap[i].owner->lru_used = false;
+    if (coremap[i].owner != NULL) {
+      coremap[i].owner->lru_used = false;
+    }
+
   }
   return selected_page;
 }
@@ -417,6 +421,11 @@ uint32_t select_page_to_evict_random() {
  * matching
  */
 int vm_fault(int faulttype, vaddr_t faultaddress) {
+  // Ignore kernel addresses?
+  if (faultaddress >= 0x80000000) {
+    return 0;
+  }
+
   // Declare these variables for use later.
   paddr_t paddr = 0;
   struct addrspace *as;
@@ -450,7 +459,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // of the allocated regions and should return an error.
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) {
-    kprintf("\nFault at 0x%x\n\n", old_addr);
+    // kprintf("\nFault at 0x%x\n\n", old_addr);
     return EFAULT;
   }
 
@@ -458,7 +467,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
 
   if (seg == NULL) {
-    kprintf("\nFault2 at 0x%x\n\n", old_addr);
+    // kprintf("\nFault2 at 0x%x\n\n", old_addr);
     return EFAULT;
   }
 

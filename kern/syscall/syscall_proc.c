@@ -501,7 +501,7 @@ void * sys_sbrk(intptr_t amt, int *err) {
     /* Disable interrupts on this CPU while frobbing the TLB. */
     int spl = splhigh();
 
-         /* Invalidate everything in the TLB */
+    /* Invalidate everything in the TLB */
     for (unsigned int i=0; i<NUM_TLB; i++) {
       tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
     }
