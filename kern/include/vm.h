@@ -39,7 +39,6 @@
 
 // Structure for coremap entry
 struct coremap_page {
-
     // Current state of this block
     enum stateEnum {FREE, KERNEL, USER} state;
 
@@ -123,5 +122,8 @@ unsigned int coremap_used_bytes(void);
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown(const struct tlbshootdown *);
 
+void invalidate_tlb(void);
+void add_entry_to_tlb(vaddr_t, paddr_t);
+uint32_t select_page_to_evict(void);
 
 #endif /* _VM_H_ */

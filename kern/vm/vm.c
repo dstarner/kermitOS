@@ -133,7 +133,6 @@ void vm_bootstrap() {
     return;
   }
 
-
   //   b Else enable swapping
   can_swap = true;
 
@@ -159,6 +158,48 @@ void vm_bootstrap() {
 
   // Make sure we really booted
   KASSERT(vm_booted); // wot
+}
+
+void invalidate_tlb() {
+  /* Disable interrupts on this CPU while frobbing the TLB. */
+  int spl = splhigh();
+
+       /* Invalidate everything in the TLB */
+  for (unsigned int i=0; i<NUM_TLB; i++) {
+    tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+  }
+
+  splx(spl);
+}
+
+void add_entry_to_tlb(vaddr_t faultaddress, paddr_t paddr) {
+  // kprintf("+");
+
+  // I believe this part attempts to find an available TLB page entry and caches
+  // it to the TLB.
+  /* Disable interrupts on this CPU while frobbing the TLB. */
+  int spl = splhigh();
+  uint32_t ehi, elo;
+  int i;
+
+  for (i=0; i<NUM_TLB; i++) {
+    tlb_read(&ehi, &elo, i);
+    if (elo & TLBLO_VALID) {
+      continue;
+    }
+
+    ehi = faultaddress;
+    elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+    tlb_write(ehi, elo, i);
+    splx(spl);
+    return;
+  }
+
+  // If the TLB is full, pick a random to evict
+  ehi = faultaddress;
+  elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+  tlb_random(ehi, elo);
+  splx(spl);
 }
 
 int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
@@ -187,15 +228,10 @@ int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
   // Find the offset of the page stored in the swapdisk
   reader_uio.uio_offset = swap_disk_index * PAGE_SIZE;
 
-  // Atomic operation
-  // lock_acquire(coremap[coremap_index].owner->swap_lock);
-
   // Read operations
   int result = VOP_READ(swap_vnode, &reader_uio);
   // Update amount of data transferred.
   remaining -= reader_uio.uio_resid;
-
-  // lock_release(coremap[coremap_index].owner->swap_lock);
 
   //KASSERT(result == 0 && remaining == 0);
   (void) result;
@@ -229,9 +265,6 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
   // Find the offset of the page stored in the swapdisk
   writer_uio.uio_offset = swap_disk_index * PAGE_SIZE;
 
-  // Atomic operation
-  // lock_acquire(coremap[coremap_index].owner->swap_lock);
-
   // kprintf("Reading From %x\n", read_from_paddr);
   // kprintf("Coremap index: %lu\n", coremap_index);
   // kprintf("Writing offset: %x\n\n", swap_disk_index * PAGE_SIZE);
@@ -241,110 +274,97 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
   // Update amount of data transferred.
   remaining -= writer_uio.uio_resid;
 
-  // lock_release(coremap[coremap_index].owner->swap_lock);
-
   //KASSERT(result == 0 && remaining == 0);
   (void) result;
   return 0;
 }
 
 int swap_in(struct page_entry * page) {
-  // If there are no more available memory locations, swap out a random page.
-  int page_available = 0;
-
   if (vm_booted) spinlock_acquire(&coremap_lock);
-  for (unsigned long i=0; i<COREMAP_PAGES; i++) {
-    if (coremap[i].state == FREE) {
-      page_available++;
-      break;
-    }
-  }
-
-  // lock_acquire(page->swap_lock);
-  if (!page_available) {
-    // kprintf("No free pages in coremap.\n");
-    // If not enough pages are found, swapout!
-    uint32_t random_page = random() % COREMAP_PAGES;
-
-    while (coremap[random_page].state != USER) {
-      random_page = random() % COREMAP_PAGES;
-    }
-    KASSERT(coremap[random_page].state != KERNEL);
-
-    if (vm_booted) spinlock_release(&coremap_lock);
-    swap_out(coremap[random_page].owner);
-    if (vm_booted) spinlock_acquire(&coremap_lock);
-  }
-
-  // page_available = 0;
-  // for (unsigned long i=0; i<COREMAP_PAGES; i++) {
-  //   if (coremap[i].state == FREE) {
-  //     page_available++;
-  //     break;
-  //   }
-  // }
-  // KASSERT(page_available != 0);
 
   // Where in disk is it stored
   unsigned int bitmap_index = page->bitmap_disk_index;
-
   page->swap_state = MEMORY;
 
-  // Try to swap in
-  if (vm_booted) spinlock_release(&coremap_lock);
-  int error = block_read(bitmap_index, page->ppage_n);
-  if (vm_booted) spinlock_acquire(&coremap_lock);
-
-  lock_acquire(bitmap_lock);
   // Make sure that it is actually in disk
   KASSERT(bitmap_isset(disk_bitmap, bitmap_index));
-  KASSERT(error == 0);
 
+  lock_acquire(bitmap_lock);
   bitmap_unmark(disk_bitmap, bitmap_index);
   lock_release(bitmap_lock);
 
+  // Try to swap in
+  // kprintf("IN %x\n", page->vpage_n);
+  if (vm_booted) spinlock_release(&coremap_lock);
+  int error = block_read(bitmap_index, page->ppage_n);
+  if (vm_booted) spinlock_acquire(&coremap_lock);
+  // kprintf("IN2 %x\n", page->vpage_n);
+
+  KASSERT(error == 0);
   KASSERT(page->swap_state == MEMORY);
 
-  // lock_release(page->swap_lock);
   if (vm_booted) spinlock_release(&coremap_lock);
 
   return 0;
 }
 
 int swap_out(struct page_entry * page) {
-  // KASSERT(page->swap_state == MEMORY);
+  KASSERT(page->swap_state == MEMORY);
   // kprintf("Swapping out...\n");
-  //
+
   if (vm_booted) spinlock_acquire(&coremap_lock);
   // Get a bitmap index
-  lock_acquire(bitmap_lock);
   unsigned int bitmap_index;
+
+  // Prevent any other processes trying to write to the same block.
+  lock_acquire(bitmap_lock);
   bitmap_alloc(disk_bitmap, &bitmap_index);
   lock_release(bitmap_lock);
 
-  // kprintf("\nSwap out to %u\n", bitmap_index);
-  // kprintf("Swapping out page at %x\n", page->ppage_n);
+  // kprintf("Swap out to %u\n", bitmap_index);
+  kprintf("Swapping out page at %x, %x\n", page->vpage_n, page->ppage_n);
 
   // Update the page entry
   page->swap_state = DISK;
   page->bitmap_disk_index = bitmap_index;
+  // Zero the page
+  as_zero_region(page->ppage_n, 1);
 
   // Try to swap out the page
   if (vm_booted) spinlock_release(&coremap_lock);
   int error = block_write(bitmap_index, page->ppage_n);
   if (vm_booted) spinlock_acquire(&coremap_lock);
+  // freeppage(page->ppage_n);
 
   KASSERT(error == 0);
-
-  // Zero the page
-  as_zero_region(page->ppage_n, 1);
-
   KASSERT(page->swap_state == DISK);
-  if (vm_booted) spinlock_release(&coremap_lock);
 
-  kprintf("Page state after Swap out: %d\n", page->state);
+  if (vm_booted) spinlock_release(&coremap_lock);
+  invalidate_tlb();
 
   return 0;
+}
+
+uint32_t select_page_to_evict() {
+  // If there are no more available memory locations, swap out a random page.
+  // if (vm_booted) spinlock_acquire(&coremap_lock);
+  for (unsigned long i=0; i<COREMAP_PAGES; i++) {
+    if (coremap[i].state == FREE) {
+      return i;
+    }
+  }
+
+  // kprintf("No free pages in coremap.\n");
+  // If not enough pages are found, swapout!
+  uint32_t random_page = random() % COREMAP_PAGES;
+
+  while (coremap[random_page].state != USER) {
+    random_page = random() % COREMAP_PAGES;
+    kprintf("@");
+  }
+
+  KASSERT(coremap[random_page].state != KERNEL);
+  return random_page;
 }
 
 /* Fault handling function called by trap code */
@@ -356,7 +376,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // Declare these variables for use later.
   paddr_t paddr = 0;
   struct addrspace *as;
-  int spl;
 
   if (curproc == NULL) {
     /*
@@ -387,13 +406,17 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // of the allocated regions and should return an error.
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) {
-    //kprintf("\nFault at 0x%x\n\n", old_addr);
+    kprintf("\nFault at 0x%x\n\n", old_addr);
     return EFAULT;
   }
 
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
 
+  if (seg == NULL) {
+    kprintf("\nFault2 at 0x%x\n\n", old_addr);
+    return EFAULT;
+  }
 
   switch (faulttype) {
     case VM_FAULT_READ:
@@ -418,16 +441,12 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = CLEAN; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
-        // page->swap_lock = lock_create("swap_lock");
         page->swap_state = MEMORY;
-        // KASSERT(page->swap_lock != NULL);
 
         set_page_owner(page, paddr);
-
         array_add(seg->page_table, page, NULL);
       }
 
-      // Set the physical page to the page's ppage.
       paddr = page->ppage_n;
       break;
 
@@ -457,77 +476,58 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
-        // page->swap_lock = lock_create("swap_lock");
-        // KASSERT(page->swap_lock != NULL);
         page->swap_state = MEMORY;
+
         set_page_owner(page, paddr);
-
         array_add(seg->page_table, page, NULL);
-
       } else {
-        // If it reaches here, that means the page is already available.
-        // Just grab the physical address translation from the page and put
-        // it in the paddr variable to add it to the TLB later.
-        paddr = page->ppage_n;
-        // KASSERT(page->swap_lock != NULL);
-      }
 
+        paddr = page->ppage_n;
+      }
 
       break;
 
     // A write was attempted on a read only page, which is an error.
     // That means the physical address on the TLB is dirty.
     case VM_FAULT_READONLY:
-      // I don't know what to do here, so I'll just do the default case...
-
+    // I don't know what to do here, so I'll just do the default case...
     default:
       return EINVAL;
   } // End of case switch
 
   // If the page is on disk
   if (page->swap_state == DISK) {
-
     KASSERT(can_swap);
 
     // SWAP!
     int error = swap_in(page);
+    kprintf("Swapped in page addr: %x, %x\n", page->vpage_n, page->ppage_n);
+    page->swap_state = MEMORY;
+    page->bitmap_disk_index = 0;
+
     paddr = page->ppage_n; // Get the new physical address.
 
     KASSERT(error == 0);
+  } else {
+    // If it reaches here, that means the page is already available.
+    // Just grab the physical address translation from the page and put
+    // it in the paddr variable to add it to the TLB later.
+    paddr = page->ppage_n;
   }
 
   // At this point the paddr needs to exist or else it would not have gotten
   // this far.
+  // kprintf("FAULT %x, %x\n", faultaddress, paddr);
   if (paddr == 0) {
-    //kprintf("faulttype %d vaddr %x -> paddr %x\n", faulttype, faultaddress, paddr);
+    // kprintf("faulttype %d vaddr %x -> paddr %x\n", faulttype, faultaddress, paddr);
+    kprintf("FAULT %x, %x\n", faultaddress, paddr);
+    return ENOMEM;
   }
+
+  add_entry_to_tlb(faultaddress, paddr);
+
   KASSERT(paddr != 0);
 
-  // I believe this part attempts to find an available TLB page entry and caches
-  // it to the TLB.
-  /* Disable interrupts on this CPU while frobbing the TLB. */
-  spl = splhigh();
-  uint32_t ehi, elo;
-  int i;
-
-  for (i=0; i<NUM_TLB; i++) {
-    tlb_read(&ehi, &elo, i);
-    if (elo & TLBLO_VALID) {
-      continue;
-    }
-    ehi = faultaddress;
-    elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-    tlb_write(ehi, elo, i);
-    splx(spl);
-    return 0;
-  }
-
-  // If the TLB is full, pick a random to evict
-  ehi = faultaddress;
-  elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-  tlb_random(ehi, elo);
-
-  splx(spl);
   return 0;
 }
 
@@ -565,10 +565,14 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
 
   // Iterate the array to find if there is a match.
   struct array * pages = seg->page_table;
+
+  KASSERT(pages != NULL);
+
   unsigned int i;
   for (i = 0; i < array_num(pages); i++) {
     struct page_entry * page = array_get(pages, i);
 
+    // WHY IS THIS CAUSING THE WHOLE PROGRAM TO CRASH
     if (page->vpage_n == 0) continue;
 
     if (((vaddr_t) (page->vpage_n)) == vaddr) {
@@ -656,30 +660,20 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
   }
 
   // If not enough pages are found, swapout!
-  uint32_t random_page = random() % COREMAP_PAGES;
-
-  while (coremap[random_page].state != USER) {
-    random_page = random() % COREMAP_PAGES;
-  }
-
-  KASSERT(coremap[random_page].state != KERNEL);
+  uint32_t random_page = select_page_to_evict();
 
   // If booted, then be atomic
-  if (vm_booted) {
-    spinlock_release(&coremap_lock);
-  }
-
+  if (vm_booted) spinlock_release(&coremap_lock);
   int error = swap_out(coremap[random_page].owner);
+  if (vm_booted) spinlock_acquire(&coremap_lock);
 
   // Fix the page if the page is created as a kernel page.
-  if (isKernel) {
-    coremap[random_page].state = KERNEL;
-  }
+  if (isKernel) coremap[random_page].state = KERNEL;
 
   KASSERT(error == 0);
-
   paddr_t paddr = (random_page * PAGE_SIZE) + coremap_pagestartaddr;
   KASSERT(can_swap);
+  if (vm_booted) spinlock_release(&coremap_lock);
 
   return paddr;
 }
@@ -708,11 +702,12 @@ void freeppage(paddr_t paddr) {
   }
 
   // Make sure that the page is actually allocated
-  KASSERT(coremap[page_num].state != FREE);
+  KASSERT(coremap[page_num].state != KERNEL);
 
   // Free it
   coremap[page_num].state = FREE;
   coremap[page_num].block_size = 0;
+  // set_page_owner(NULL, paddr);
 
   // If booted, then be atomic
   if (vm_booted) {
@@ -745,7 +740,6 @@ void free_kpages(vaddr_t addr) {
     coremap[page_num + offset].block_size = 0;
   }
 
-
   // If booted, then be atomic
   if (vm_booted) {
     spinlock_release(&coremap_lock);
@@ -776,7 +770,7 @@ void set_page_owner(struct page_entry * page, paddr_t address) {
   unsigned long page_num = (address - coremap_pagestartaddr) / PAGE_SIZE;
 
   // Make sure that the page is actually allocated
-  KASSERT(coremap[page_num].state != FREE);
+  // KASSERT(coremap[page_num].state != FREE);
 
   coremap[page_num].owner = page;
 }

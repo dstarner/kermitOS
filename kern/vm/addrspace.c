@@ -162,12 +162,8 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
         return ENOMEM;
       }
 
-      // lock_acquire(old_page->swap_lock);
-
       // Copy over the virtual page info
       new_page->vpage_n = old_page->vpage_n;
-
-      // lock_release(old_page->swap_lock);
 
       if (new_seg->writeable) { new_page->state = DIRTY; }
 
@@ -181,16 +177,11 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
         return ENOMEM;
       }
 
-      // new_page->swap_lock = lock_create("swap_lock");
-      // KASSERT(new_page->swap_lock != NULL);
-
       // Check if the old page is on disk:
       if (old_page->swap_state == DISK) {
-        // lock_acquire(old_page->swap_lock);
         swap_in(old_page);
         memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
                (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
-        // lock_release(old_page->swap_lock);
 
       } else {
         memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
@@ -223,15 +214,7 @@ as_activate(void)
   return;
   }
 
-   /* Disable interrupts on this CPU while frobbing the TLB. */
-   int spl = splhigh();
-
-        /* Invalidate everything in the TLB */
-   for (unsigned int i=0; i<NUM_TLB; i++) {
-     tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-   }
-
-   splx(spl);
+  invalidate_tlb();
 }
 
 void as_deactivate(void)
@@ -390,7 +373,6 @@ void segment_destroy(struct segment_entry * segment) {
     }
 
     // Free the page, and then free the actual structure
-    // lock_destroy(page->swap_lock);
 
     kfree(page);
   }
