@@ -374,7 +374,9 @@ uint32_t select_page_to_evict_clock_lru() {
     if (initial_lru_pointer == lru_pointer) {
       // Unset all the page's pointers here.
       for (unsigned int i = 0; i < COREMAP_PAGES; i++) {
-        coremap[i].owner->lru_used = false;
+        if (coremap[i].owner != NULL) {
+          coremap[i].owner->lru_used = false;
+        }
       }
 
       return select_page_to_evict_random();
@@ -820,6 +822,8 @@ unsigned int coremap_used_bytes() {
 
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown(const struct tlbshootdown * shootdown) {
+  // TODO: Not remove everything.
+  invalidate_tlb();
   (void) shootdown;
 }
 
