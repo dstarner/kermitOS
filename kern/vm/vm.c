@@ -63,6 +63,9 @@ void coremap_bootstrap() {
   // The range for the coremap
   paddr_t addr_range = last_address - first_address;
 
+  // Initialize LRU pointer
+  lru_pointer = 0;
+
   //         pages          coremap
   //  mem     coremap     -------------- pad coremap to 4K --    physical pages
   // range = (n * SOCP + (PAGE_SIZE - (n * SOCP % PAGE_SIZE))) + (PAGE_SIZE * n)
@@ -346,13 +349,54 @@ int swap_out(struct page_entry * page) {
 }
 
 uint32_t select_page_to_evict() {
-  // If there are no more available memory locations, swap out a random page.
-  // if (vm_booted) spinlock_acquire(&coremap_lock);
+  // Attempt to find a free page first.
   for (unsigned long i=0; i<COREMAP_PAGES; i++) {
     if (coremap[i].state == FREE) {
       return i;
     }
   }
+
+  // return select_page_to_evict_random();
+  return select_page_to_evict_clock_lru();
+}
+
+uint32_t select_page_to_evict_clock_lru() {
+  // If there are no more available memory locations, find a page that is not
+  // recently used.
+
+  unsigned int initial_lru_pointer = lru_pointer++;
+  uint32_t selected_page = lru_pointer % COREMAP_PAGES;
+
+  while (coremap[selected_page].state != USER || coremap[selected_page].owner->lru_used) {
+    // If we made a whole rotation and there is no page to choose, use the random
+    // algorithm.
+    if (initial_lru_pointer == lru_pointer) {
+      // Unset all the page's pointers here.
+      for (unsigned int i = 0; i < COREMAP_PAGES; i++) {
+        coremap[i].owner->lru_used = false;
+      }
+
+      return select_page_to_evict_random();
+    }
+
+    // Pick a new page if the page is actively used.
+    if (++lru_pointer > COREMAP_PAGES) {
+      lru_pointer = 0;
+    }
+
+    selected_page = lru_pointer % COREMAP_PAGES;
+  }
+
+  // Unset all the page's pointers here.
+  for (unsigned int i = 0; i < COREMAP_PAGES; i++) {
+    coremap[i].owner->lru_used = false;
+  }
+  return selected_page;
+}
+
+
+uint32_t select_page_to_evict_random() {
+  // If there are no more available memory locations, swap out a random page.
 
   // kprintf("No free pages in coremap.\n");
   // If not enough pages are found, swapout!
@@ -442,6 +486,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->state = CLEAN; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
+        page->lru_used = false;
 
         set_page_owner(page, paddr);
         array_add(seg->page_table, page, NULL);
@@ -477,6 +522,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->state = DIRTY; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
+        page->lru_used = false;
 
         set_page_owner(page, paddr);
         array_add(seg->page_table, page, NULL);
@@ -501,7 +547,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
     // SWAP!
     int error = swap_in(page);
-    kprintf("Swapped in page addr: %x, %x\n", page->vpage_n, page->ppage_n);
+    // kprintf("Swapped in page addr: %x, %x\n", page->vpage_n, page->ppage_n);
     page->swap_state = MEMORY;
     page->bitmap_disk_index = 0;
 
@@ -515,6 +561,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     paddr = page->ppage_n;
   }
 
+  // Update the LRU in the coremap.
+  page->lru_used = true;
+
   // At this point the paddr needs to exist or else it would not have gotten
   // this far.
   // kprintf("FAULT %x, %x\n", faultaddress, paddr);
@@ -527,7 +576,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   add_entry_to_tlb(faultaddress, paddr);
 
   KASSERT(paddr != 0);
-
   return 0;
 }
 

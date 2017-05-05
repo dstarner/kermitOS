@@ -55,6 +55,7 @@ struct page_entry {
 
   // This will also need the location on disk (if on disk)
   unsigned int bitmap_disk_index;
+  bool lru_used;
 
 };
 

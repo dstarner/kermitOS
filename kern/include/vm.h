@@ -77,6 +77,7 @@ unsigned int addrs_alloc;
 
 // Array based coremap
 struct coremap_page *coremap;
+unsigned int lru_pointer;
 
 // If the vm manager has booted
 bool vm_booted;
@@ -125,5 +126,7 @@ void vm_tlbshootdown(const struct tlbshootdown *);
 void invalidate_tlb(void);
 void add_entry_to_tlb(vaddr_t, paddr_t);
 uint32_t select_page_to_evict(void);
+uint32_t select_page_to_evict_random(void);
+uint32_t select_page_to_evict_clock_lru(void);
 
 #endif /* _VM_H_ */
