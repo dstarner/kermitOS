@@ -37,6 +37,7 @@
 #include <proc.h>
 #include <array.h>
 #include <current.h>
+#include <bitmap.h>
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -161,8 +162,13 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
         return ENOMEM;
       }
 
+      // lock_acquire(old_page->swap_lock);
+
       // Copy over the virtual page info
       new_page->vpage_n = old_page->vpage_n;
+
+      // lock_release(old_page->swap_lock);
+
       if (new_seg->writeable) { new_page->state = DIRTY; }
 
       // get a new physical page
@@ -175,11 +181,21 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
         return ENOMEM;
       }
 
-      new_page->swap_lock = lock_create("swap_lock");
-      KASSERT(new_page->swap_lock != NULL);
+      // new_page->swap_lock = lock_create("swap_lock");
+      // KASSERT(new_page->swap_lock != NULL);
 
-      memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
-             (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
+      // Check if the old page is on disk:
+      if (old_page->swap_state == DISK) {
+        // lock_acquire(old_page->swap_lock);
+        swap_in(old_page);
+        memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
+               (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
+        // lock_release(old_page->swap_lock);
+
+      } else {
+        memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
+               (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
+      }
 
       array_add(new_seg->page_table, new_page, NULL);
     }
@@ -367,9 +383,15 @@ void segment_destroy(struct segment_entry * segment) {
     // Get each page and free it
     struct page_entry * page = (struct page_entry *) array_get(segment->page_table, i);
 
+    if (page->swap_state == DISK) {
+      bitmap_unmark(disk_bitmap, page->bitmap_disk_index);
+    } else {
+      freeppage(page->ppage_n);
+    }
+
     // Free the page, and then free the actual structure
-    lock_destroy(page->swap_lock);
-    freeppage(page->ppage_n);
+    // lock_destroy(page->swap_lock);
+
     kfree(page);
   }
 

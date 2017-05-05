@@ -167,7 +167,7 @@ int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
   struct uio reader_uio;
   struct iovec reader_iovec;
   int remaining = PAGE_SIZE; // The remaining bytes to read (these are pages)
-  unsigned long coremap_index = (write_to_paddr - coremap_pagestartaddr) / PAGE_SIZE;
+  // unsigned long coremap_index = (write_to_paddr - coremap_pagestartaddr) / PAGE_SIZE;
 
   // Determine where to store the data being read.
   reader_iovec.iov_ubase = (void *) PADDR_TO_KVADDR(write_to_paddr);
@@ -188,14 +188,14 @@ int block_read(unsigned int swap_disk_index, paddr_t write_to_paddr) {
   reader_uio.uio_offset = swap_disk_index * PAGE_SIZE;
 
   // Atomic operation
-  lock_acquire(coremap[coremap_index].owner->swap_lock);
+  // lock_acquire(coremap[coremap_index].owner->swap_lock);
 
   // Read operations
   int result = VOP_READ(swap_vnode, &reader_uio);
   // Update amount of data transferred.
   remaining -= reader_uio.uio_resid;
 
-  lock_release(coremap[coremap_index].owner->swap_lock);
+  // lock_release(coremap[coremap_index].owner->swap_lock);
 
   //KASSERT(result == 0 && remaining == 0);
   (void) result;
@@ -209,7 +209,7 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
   struct uio writer_uio;
   struct iovec writer_iovec;
   int remaining = PAGE_SIZE; // The remaining bytes to read (these are pages)
-  unsigned long coremap_index = (read_from_paddr - coremap_pagestartaddr) / PAGE_SIZE;
+  // unsigned long coremap_index = (read_from_paddr - coremap_pagestartaddr) / PAGE_SIZE;
 
   // Determine where to store the data being read.
   writer_iovec.iov_ubase = (void *) PADDR_TO_KVADDR(read_from_paddr);
@@ -230,7 +230,7 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
   writer_uio.uio_offset = swap_disk_index * PAGE_SIZE;
 
   // Atomic operation
-  lock_acquire(coremap[coremap_index].owner->swap_lock);
+  // lock_acquire(coremap[coremap_index].owner->swap_lock);
 
   // kprintf("Reading From %x\n", read_from_paddr);
   // kprintf("Coremap index: %lu\n", coremap_index);
@@ -241,7 +241,7 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
   // Update amount of data transferred.
   remaining -= writer_uio.uio_resid;
 
-  lock_release(coremap[coremap_index].owner->swap_lock);
+  // lock_release(coremap[coremap_index].owner->swap_lock);
 
   //KASSERT(result == 0 && remaining == 0);
   (void) result;
@@ -249,49 +249,100 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
 }
 
 int swap_in(struct page_entry * page) {
+  // If there are no more available memory locations, swap out a random page.
+  int page_available = 0;
+
+  if (vm_booted) spinlock_acquire(&coremap_lock);
+  for (unsigned long i=0; i<COREMAP_PAGES; i++) {
+    if (coremap[i].state == FREE) {
+      page_available++;
+      break;
+    }
+  }
+
+  // lock_acquire(page->swap_lock);
+  if (!page_available) {
+    // kprintf("No free pages in coremap.\n");
+    // If not enough pages are found, swapout!
+    uint32_t random_page = random() % COREMAP_PAGES;
+
+    while (coremap[random_page].state != USER) {
+      random_page = random() % COREMAP_PAGES;
+    }
+    KASSERT(coremap[random_page].state != KERNEL);
+
+    if (vm_booted) spinlock_release(&coremap_lock);
+    swap_out(coremap[random_page].owner);
+    if (vm_booted) spinlock_acquire(&coremap_lock);
+  }
+
+  // page_available = 0;
+  // for (unsigned long i=0; i<COREMAP_PAGES; i++) {
+  //   if (coremap[i].state == FREE) {
+  //     page_available++;
+  //     break;
+  //   }
+  // }
+  // KASSERT(page_available != 0);
+
   // Where in disk is it stored
   unsigned int bitmap_index = page->bitmap_disk_index;
+
+  page->swap_state = MEMORY;
+
+  // Try to swap in
+  if (vm_booted) spinlock_release(&coremap_lock);
+  int error = block_read(bitmap_index, page->ppage_n);
+  if (vm_booted) spinlock_acquire(&coremap_lock);
 
   lock_acquire(bitmap_lock);
   // Make sure that it is actually in disk
   KASSERT(bitmap_isset(disk_bitmap, bitmap_index));
-
-  // Try to swap in
-  int error = block_read(bitmap_index, page->ppage_n);
-
-  // Make sure we did this right
   KASSERT(error == 0);
 
-  page->swap_state = MEMORY;
   bitmap_unmark(disk_bitmap, bitmap_index);
   lock_release(bitmap_lock);
+
+  KASSERT(page->swap_state == MEMORY);
+
+  // lock_release(page->swap_lock);
+  if (vm_booted) spinlock_release(&coremap_lock);
 
   return 0;
 }
 
 int swap_out(struct page_entry * page) {
-
+  // KASSERT(page->swap_state == MEMORY);
+  // kprintf("Swapping out...\n");
+  //
+  if (vm_booted) spinlock_acquire(&coremap_lock);
   // Get a bitmap index
   lock_acquire(bitmap_lock);
   unsigned int bitmap_index;
   bitmap_alloc(disk_bitmap, &bitmap_index);
+  lock_release(bitmap_lock);
 
   // kprintf("\nSwap out to %u\n", bitmap_index);
   // kprintf("Swapping out page at %x\n", page->ppage_n);
-
-  // Try to swap out the page
-  int error = block_write(bitmap_index, page->ppage_n);
-
-  KASSERT(error == 0);
 
   // Update the page entry
   page->swap_state = DISK;
   page->bitmap_disk_index = bitmap_index;
 
-  lock_release(bitmap_lock);
+  // Try to swap out the page
+  if (vm_booted) spinlock_release(&coremap_lock);
+  int error = block_write(bitmap_index, page->ppage_n);
+  if (vm_booted) spinlock_acquire(&coremap_lock);
+
+  KASSERT(error == 0);
 
   // Zero the page
   as_zero_region(page->ppage_n, 1);
+
+  KASSERT(page->swap_state == DISK);
+  if (vm_booted) spinlock_release(&coremap_lock);
+
+  kprintf("Page state after Swap out: %d\n", page->state);
 
   return 0;
 }
@@ -367,9 +418,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->vpage_n = faultaddress;
         page->state = CLEAN; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
-        page->swap_lock = lock_create("swap_lock");
+        // page->swap_lock = lock_create("swap_lock");
         page->swap_state = MEMORY;
-        KASSERT(page->swap_lock != NULL);
+        // KASSERT(page->swap_lock != NULL);
 
         set_page_owner(page, paddr);
 
@@ -397,13 +448,17 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         // Create a new page entry to reference the physical page that was
         // just requested.
         page = (struct page_entry *) kmalloc(sizeof(struct page_entry));
+        if (page == NULL) {
+          return ENOMEM;
+        }
+
         // Set the values of the new page created.
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
         page->state = DIRTY; // If a page is writable then assume it's dirty.
         page->bitmap_disk_index = 0;
-        page->swap_lock = lock_create("swap_lock");
-        KASSERT(page->swap_lock != NULL);
+        // page->swap_lock = lock_create("swap_lock");
+        // KASSERT(page->swap_lock != NULL);
         page->swap_state = MEMORY;
         set_page_owner(page, paddr);
 
@@ -414,6 +469,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         // Just grab the physical address translation from the page and put
         // it in the paddr variable to add it to the TLB later.
         paddr = page->ppage_n;
+        // KASSERT(page->swap_lock != NULL);
       }
 
 
@@ -435,6 +491,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
     // SWAP!
     int error = swap_in(page);
+    paddr = page->ppage_n; // Get the new physical address.
+
     KASSERT(error == 0);
   }
 
@@ -510,6 +568,9 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
   unsigned int i;
   for (i = 0; i < array_num(pages); i++) {
     struct page_entry * page = array_get(pages, i);
+
+    if (page->vpage_n == 0) continue;
+
     if (((vaddr_t) (page->vpage_n)) == vaddr) {
       return page;
     }
@@ -586,6 +647,14 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
     return 0;
   }
 
+  if (npages > 1) {
+    if (vm_booted) {
+      spinlock_release(&coremap_lock);
+    }
+
+    return 0;
+  }
+
   // If not enough pages are found, swapout!
   uint32_t random_page = random() % COREMAP_PAGES;
 
@@ -601,6 +670,12 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
   }
 
   int error = swap_out(coremap[random_page].owner);
+
+  // Fix the page if the page is created as a kernel page.
+  if (isKernel) {
+    coremap[random_page].state = KERNEL;
+  }
+
   KASSERT(error == 0);
 
   paddr_t paddr = (random_page * PAGE_SIZE) + coremap_pagestartaddr;
