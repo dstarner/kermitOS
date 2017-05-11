@@ -285,9 +285,20 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
 int swap_in(struct page_entry * page) {
   if (vm_booted) spinlock_acquire(&coremap_lock);
 
-  // Where in disk is it stored
+  kprintf("%zu page found\n", select_page_to_evict());
+  struct page_entry * new_page = coremap[(unsigned long) select_page_to_evict()].owner;
+  if (coremap[(unsigned long) select_page_to_evict()].state != FREE) {
+
+    if (vm_booted) spinlock_release(&coremap_lock);
+    swap_out(new_page);
+    if (vm_booted) spinlock_acquire(&coremap_lock);
+  }
+
+  new_page->swap_state = MEMORY;
+  new_page->state = CLEAN;
+
   unsigned int bitmap_index = page->bitmap_disk_index;
-  page->swap_state = MEMORY;
+  new_page->bitmap_disk_index = bitmap_index;
 
   // Make sure that it is actually in disk
   KASSERT(bitmap_isset(disk_bitmap, bitmap_index));
@@ -299,12 +310,12 @@ int swap_in(struct page_entry * page) {
   // Try to swap in
   // kprintf("IN %x\n", page->vpage_n);
   if (vm_booted) spinlock_release(&coremap_lock);
-  int error = block_read(bitmap_index, page->ppage_n);
+  int error = block_read(bitmap_index, new_page->ppage_n);
   if (vm_booted) spinlock_acquire(&coremap_lock);
   // kprintf("IN2 %x\n", page->vpage_n);
 
   KASSERT(error == 0);
-  KASSERT(page->swap_state == MEMORY);
+  KASSERT(new_page->swap_state == MEMORY);
 
   if (vm_booted) spinlock_release(&coremap_lock);
 
@@ -324,21 +335,21 @@ int swap_out(struct page_entry * page) {
   bitmap_alloc(disk_bitmap, &bitmap_index);
   lock_release(bitmap_lock);
 
-  // kprintf("Swap out to %u\n", bitmap_index);
+  kprintf("Swap out to %u\n", bitmap_index);
   kprintf("Swapping out page at %x, %x\n", page->vpage_n, page->ppage_n);
 
   // Update the page entry
   page->swap_state = DISK;
   page->bitmap_disk_index = bitmap_index;
 
-  // Zero the page
-  as_zero_region(page->ppage_n, 1);
-
   // Try to swap out the page
   if (vm_booted) spinlock_release(&coremap_lock);
   int error = block_write(bitmap_index, page->ppage_n);
   if (vm_booted) spinlock_acquire(&coremap_lock);
   // freeppage(page->ppage_n);
+
+  // Zero the page
+  as_zero_region(page->ppage_n, 1);
 
   KASSERT(error == 0);
   KASSERT(page->swap_state == DISK);
@@ -410,7 +421,7 @@ uint32_t select_page_to_evict_random() {
 
   while (coremap[random_page].state != USER) {
     random_page = random() % COREMAP_PAGES;
-    kprintf("@");
+    // kprintf("@");
   }
 
   KASSERT(coremap[random_page].state != KERNEL);
@@ -424,9 +435,9 @@ uint32_t select_page_to_evict_random() {
  */
 int vm_fault(int faulttype, vaddr_t faultaddress) {
   // Ignore kernel addresses?
-  if (faultaddress >= 0x80000000) {
-    return 0;
-  }
+  // if (faultaddress >= 0x80000000) {
+  //   return 0;
+  // }
 
   // Declare these variables for use later.
   paddr_t paddr = 0;
@@ -462,16 +473,34 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) {
     // kprintf("\nFault at 0x%x\n\n", old_addr);
+    kprintf("\n==============\n\n");
+
+    for (unsigned int i = 0; i < COREMAP_PAGES; i++) {
+      if (coremap[i].owner == NULL) {
+        kprintf("- \n");
+        continue;
+      }
+
+      if (coremap[i].owner->swap_state == MEMORY) {
+        kprintf("M %x\n", coremap[i].owner->vpage_n);
+      } else if (coremap[i].owner->swap_state == DISK) {
+        kprintf("D %x\n", coremap[i].owner->vpage_n);
+      } else {
+        kprintf("? \n");
+      }
+    }
+    kprintf("\n==============\n\n");
+
     return EFAULT;
   }
 
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
 
-  if (seg == NULL) {
-    // kprintf("\nFault2 at 0x%x\n\n", old_addr);
-    return EFAULT;
-  }
+  // if (page == NULL) {
+  //   kprintf("\nFault2 at 0x%x\n\n", old_addr);
+  //   return EFAULT;
+  // }
 
   switch (faulttype) {
     case VM_FAULT_READ:
@@ -491,6 +520,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         // Create a new page entry to reference the physical page that was
         // just requested.
         page = (struct page_entry *) kmalloc(sizeof(struct page_entry));
+        KASSERT(page);
+
         // Set the values of the new page created.
         page->ppage_n = paddr;
         page->vpage_n = faultaddress;
@@ -498,6 +529,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
         page->lru_used = false;
+        page->swap_lock = lock_create("swap_lock");
 
         set_page_owner(page, paddr);
         array_add(seg->page_table, page, NULL);
@@ -523,9 +555,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         // Create a new page entry to reference the physical page that was
         // just requested.
         page = (struct page_entry *) kmalloc(sizeof(struct page_entry));
-        if (page == NULL) {
-          return ENOMEM;
-        }
+        KASSERT(page);
 
         // Set the values of the new page created.
         page->ppage_n = paddr;
@@ -534,6 +564,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
         page->lru_used = false;
+        page->swap_lock = lock_create("swap_lock");
 
         set_page_owner(page, paddr);
         array_add(seg->page_table, page, NULL);
@@ -632,7 +663,8 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
     struct page_entry * page = array_get(pages, i);
 
     // WHY IS THIS CAUSING THE WHOLE PROGRAM TO CRASH
-    if (page->vpage_n == 0) continue;
+    KASSERT(page != NULL);
+    // if (page->vpage_n == 0) continue;
 
     if (((vaddr_t) (page->vpage_n)) == vaddr) {
       return page;
