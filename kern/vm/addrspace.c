@@ -137,12 +137,6 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
     new_seg->executable = old_seg->executable;
     new_seg->isHeap = old_seg->isHeap;
 
-    //kprintf("COPY ");
-    //if (new_seg->executable) {kprintf("CODE/TEXT: Executable, ");}
-    //if (new_seg->writeable) {kprintf("Writeable, ");}
-    //if (new_seg->readable) {kprintf("Readable, ");}
-    //kprintf("0x%x --> 0x%x\n", new_seg->region_start, new_seg->region_start + new_seg->region_size);
-
     unsigned int pt_size = ll_num(old_seg->page_table);
     new_seg->page_table = ll_create();
     if (new_seg->page_table == NULL) {

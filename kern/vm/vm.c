@@ -472,27 +472,23 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // of the allocated regions and should return an error.
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) {
+    // kprintf("\n==============\n\n");
     // kprintf("\nFault at 0x%x\n\n", old_addr);
-    //kprintf("\n==============\n\n");
-
-    for (unsigned int i = 0; i < COREMAP_PAGES; i++) {
-      if (coremap[i].owner == NULL) {
-        kprintf("- \n");
-        continue;
-      }
-
-      if (coremap[i].owner->swap_state == MEMORY) {
-        kprintf("M %x\n", coremap[i].owner->vpage_n);
-      } else if (coremap[i].owner->swap_state == DISK) {
-        kprintf("D %x\n", coremap[i].owner->vpage_n);
-      } else {
-        kprintf("? \n");
-      }
-    }
-    kprintf("\n==============\n\n");
+    //
+    // as = proc_getas();
+    //
+    // for (unsigned int i=0; i < ll_num(as->segments_list); i++) {
+    //   struct segment_entry * seg = ll_get(as->segments_list, i);
+    //   if (seg->executable) {kprintf("CODE/TEXT: Executable, ");}
+    //   if (seg->writeable) {kprintf("Writeable, ");}
+    //   if (seg->readable) {kprintf("Readable, ");}
+    //   kprintf("0x%x --> 0x%x\n", seg->region_start, seg->region_start + seg->region_size);
+    // }
 
     return EFAULT;
   }
+
+  KASSERT(seg != NULL);
 
   // If fault address is valid, check if fault address is in Page Table
   struct page_entry * page = find_page_on_segment(seg, faultaddress);
@@ -529,7 +525,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
         page->lru_used = false;
-        //page->swap_lock = lock_create("swap_lock");
+        page->swap_lock = lock_create("swap_lock");
 
         set_page_owner(page, paddr);
         ll_add(seg->page_table, page, NULL);
@@ -564,7 +560,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
         page->lru_used = false;
-        //page->swap_lock = lock_create("swap_lock");
+        page->swap_lock = lock_create("swap_lock");
 
         set_page_owner(page, paddr);
         ll_add(seg->page_table, page, NULL);
@@ -641,6 +637,7 @@ struct segment_entry * find_segment_from_vaddr(vaddr_t vaddr) {
     }
   }
 
+
   return NULL;
 }
 
@@ -652,10 +649,8 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
   // Make sure the process exists as we need to grab information from it.
   KASSERT(curproc != NULL);
   KASSERT(seg != NULL);
-
   // Iterate the array to find if there is a match.
   struct linkedlist * pages = seg->page_table;
-
   KASSERT(pages != NULL);
 
   unsigned int i;
