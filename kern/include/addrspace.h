@@ -38,7 +38,7 @@
 #include <mips/tlb.h>
 #include <vm.h>
 #include "opt-dumbvm.h"
-#include <array.h>
+#include <linkedlist.h>
 
 
 struct vnode;
@@ -57,7 +57,7 @@ struct page_entry {
   unsigned int bitmap_disk_index;
   bool lru_used;
 
-  struct lock * swap_lock;
+  //struct lock * swap_lock;
 
 };
 
@@ -67,7 +67,7 @@ struct segment_entry {
     // Size of the region
     size_t region_size;
     // Page table for the heap
-    struct array * page_table;
+    struct linkedlist * page_table;
 
     // What type of segment is this?
     int readable;
@@ -97,7 +97,7 @@ struct addrspace {
 #else
 
   // The segments this address space has
-  struct array * segments_list;
+  struct linkedlist * segments_list;
 
 #endif
 };

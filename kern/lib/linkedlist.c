@@ -4,93 +4,68 @@
 #include <linkedlist.h>
 
 
-/* Adds to a linked list */
-void add_to_llist(struct linkedlist * list, void * datum) {
+struct linkedlist * ll_create() {
+  struct linkedlist * list = kmalloc(sizeof(struct linkedlist));
+  list->size = 0;
+  list->head = NULL;
+  return list;
+}
 
-  struct linkedlist_node * node = kmalloc(sizeof(struct linkedlist_node));
 
-  // Set the data
-  node->data = datum;
-  node->next = NULL;
+int ll_add(struct linkedlist * list, void * data, unsigned *index_ret) {
+  (void) index_ret;
 
-  // Increment the size
-  list->size++;
-
-  // If the list is NULL, then set to the head of the list.
   if (list->head == NULL) {
-    list->head = node;
-    return;
+    list->head = kmalloc(sizeof(struct linkedlist_node));
+    if (list->head == NULL) {return 1;}
+    list->head->data = data;
+    list->size = 1;
+    return 0;
   }
 
-  // Get the head of the list
   struct linkedlist_node * current = list->head;
 
   while (current->next != NULL) {
     current = current->next;
   }
 
-  current->next = node;
-
+  current->next = kmalloc(sizeof(struct linkedlist_node));
+  if (current->next == NULL) {return 1;}
+  current->next->data = data;
+  list->size++;
+  return 0;
 }
 
-/* Gets index from a linked list */
-void * get_from_llist(struct linkedlist * list, unsigned int index) {
-
-  // If the list is smaller than requested size or null list
-  if (list == NULL || list->size < index || list->head == NULL) return NULL;
-
-  struct linkedlist_node * current = list->head;
+void * ll_get(struct linkedlist * list, unsigned int index) {
+  if (list->size < index) {
+    return NULL;
+  }
   unsigned int count = 0;
+  struct linkedlist_node * current = list->head;
 
   while (current != NULL) {
-
-    // If we found what we want
-    if (count == index) return(current->data);
-
+    if (count == index) {
+      return current->data;
+    }
     count++;
     current = current->next;
   }
-
-  // Not found
   return NULL;
-
 }
 
+unsigned int ll_num(struct linkedlist * list) {
+  return list->size;
+}
 
-void delete_llist(struct linkedlist * list, bool isSegment) {
-
-  // Delete an empty list
-  if (list->size > 0 && list->head == NULL) {
-    kfree(list);
-    return;
-  }
-
-  // Start somewhere
+void ll_destroy(struct linkedlist * list) {
   struct linkedlist_node * current = list->head;
+  struct linkedlist_node * next;
 
-  // Iterate over the list
   while (current != NULL) {
-
-    // Delete the actual object
-    if (isSegment) {
-      struct segment_entry * segment = (struct segment_entry *) current->data;
-      kfree(segment);
-
-    } else {
-
-      struct page_entry * page = (struct page_entry *) current->data;
-      kfree(page);
-
-    }
-
-    // Get the next one and delete the current.
-    struct linkedlist_node * next = current->next;
+    next = current->next;
     kfree(current);
-
-    // Set new current
     current = next;
   }
 
-  // Free the list
   kfree(list);
 }

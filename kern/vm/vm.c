@@ -9,7 +9,7 @@
 #include <mips/tlb.h>
 #include <addrspace.h>
 #include <vm.h>
-#include <array.h>
+#include <linkedlist.h>
 #include <vfs.h>
 #include <vnode.h>
 #include <stat.h>
@@ -285,7 +285,7 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
 int swap_in(struct page_entry * page) {
   if (vm_booted) spinlock_acquire(&coremap_lock);
 
-  kprintf("%zu page found\n", select_page_to_evict());
+  //kprintf("%zu page found\n", select_page_to_evict());
   struct page_entry * new_page = coremap[(unsigned long) select_page_to_evict()].owner;
   if (coremap[(unsigned long) select_page_to_evict()].state != FREE) {
 
@@ -335,8 +335,8 @@ int swap_out(struct page_entry * page) {
   bitmap_alloc(disk_bitmap, &bitmap_index);
   lock_release(bitmap_lock);
 
-  kprintf("Swap out to %u\n", bitmap_index);
-  kprintf("Swapping out page at %x, %x\n", page->vpage_n, page->ppage_n);
+  //kprintf("Swap out to %u\n", bitmap_index);
+  //kprintf("Swapping out page at %x, %x\n", page->vpage_n, page->ppage_n);
 
   // Update the page entry
   page->swap_state = DISK;
@@ -473,7 +473,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
   // TODO: Stack overflow vs heap out-of-bounds
   if (seg == NULL) {
     // kprintf("\nFault at 0x%x\n\n", old_addr);
-    kprintf("\n==============\n\n");
+    //kprintf("\n==============\n\n");
 
     for (unsigned int i = 0; i < COREMAP_PAGES; i++) {
       if (coremap[i].owner == NULL) {
@@ -529,10 +529,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
         page->lru_used = false;
-        page->swap_lock = lock_create("swap_lock");
+        //page->swap_lock = lock_create("swap_lock");
 
         set_page_owner(page, paddr);
-        array_add(seg->page_table, page, NULL);
+        ll_add(seg->page_table, page, NULL);
       }
 
       paddr = page->ppage_n;
@@ -564,10 +564,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
         page->lru_used = false;
-        page->swap_lock = lock_create("swap_lock");
+        //page->swap_lock = lock_create("swap_lock");
 
         set_page_owner(page, paddr);
-        array_add(seg->page_table, page, NULL);
+        ll_add(seg->page_table, page, NULL);
       } else {
 
         paddr = page->ppage_n;
@@ -631,10 +631,10 @@ struct segment_entry * find_segment_from_vaddr(vaddr_t vaddr) {
   KASSERT(as != NULL);
 
   // Iterate the array to find if there is a match.
-  struct array * segs = as->segments_list;
+  struct linkedlist * segs = as->segments_list;
   unsigned int i;
-  for (i = 0; i < array_num(segs); i++) {
-    struct segment_entry * seg = array_get(segs, i);
+  for (i = 0; i < ll_num(segs); i++) {
+    struct segment_entry * seg = ll_get(segs, i);
     if (seg->region_start <= vaddr &&
         seg->region_start + seg->region_size > vaddr) {
       return seg;
@@ -654,13 +654,13 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
   KASSERT(seg != NULL);
 
   // Iterate the array to find if there is a match.
-  struct array * pages = seg->page_table;
+  struct linkedlist * pages = seg->page_table;
 
   KASSERT(pages != NULL);
 
   unsigned int i;
-  for (i = 0; i < array_num(pages); i++) {
-    struct page_entry * page = array_get(pages, i);
+  for (i = 0; i < ll_num(pages); i++) {
+    struct page_entry * page = ll_get(pages, i);
 
     // WHY IS THIS CAUSING THE WHOLE PROGRAM TO CRASH
     KASSERT(page != NULL);

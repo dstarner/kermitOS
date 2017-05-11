@@ -18,12 +18,14 @@ struct linkedlist {
 
 };
 
-/* Adds to a linked list */
-void add_to_llist(struct linkedlist *, void *);
+struct linkedlist * ll_create(void);
 
-/* Gets index from a linked list */
-void * get_from_llist(struct linkedlist *, unsigned int);
+unsigned int ll_num(struct linkedlist *);
 
-void delete_llist(struct linkedlist *, bool);
+void * ll_get(struct linkedlist * list, unsigned int index);
+
+int ll_add(struct linkedlist * list, void * data, unsigned *index_ret);
+
+void ll_destroy(struct linkedlist *);
 
 #endif

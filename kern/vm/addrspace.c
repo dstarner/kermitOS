@@ -35,7 +35,7 @@
 #include <addrspace.h>
 #include <vm.h>
 #include <proc.h>
-#include <array.h>
+#include <linkedlist.h>
 #include <current.h>
 #include <bitmap.h>
 
@@ -54,8 +54,8 @@ as_create(bool createHeap) {
     return NULL;
   }
 
-        // Create the segments list
-  as->segments_list = array_create();
+  // Create the segments list
+  as->segments_list = ll_create();
   if (as->segments_list == NULL) {
     kfree(as);
     return NULL;
@@ -84,13 +84,13 @@ as_create(bool createHeap) {
   heap_segment->writeable = 1;
   heap_segment->executable = 0;
 
-  heap_segment->page_table = array_create();
+  heap_segment->page_table = ll_create();
   if (heap_segment->page_table == NULL) {
     as_destroy(as);
     return NULL;
   }
 
-  array_add(as->segments_list, heap_segment, NULL);
+  ll_add(as->segments_list, heap_segment, NULL);
 
   return as;
 }
@@ -114,13 +114,13 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
   struct segment_entry * new_seg;
   struct page_entry * old_page;
   struct page_entry * new_page;
-  unsigned int size = array_num(old->segments_list);
+  unsigned int size = ll_num(old->segments_list);
 
         // Go through and copy segments
   for (unsigned int i=0; i < size; i++) {
 
     // Get the old segment
-    old_seg = (struct segment_entry *) array_get(old->segments_list, i);
+    old_seg = (struct segment_entry *) ll_get(old->segments_list, i);
 
     // Create the new segment
     new_seg = (struct segment_entry *) kmalloc(sizeof(struct segment_entry));
@@ -143,8 +143,8 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
     //if (new_seg->readable) {kprintf("Readable, ");}
     //kprintf("0x%x --> 0x%x\n", new_seg->region_start, new_seg->region_start + new_seg->region_size);
 
-    unsigned int pt_size = array_num(old_seg->page_table);
-    new_seg->page_table = array_create();
+    unsigned int pt_size = ll_num(old_seg->page_table);
+    new_seg->page_table = ll_create();
     if (new_seg->page_table == NULL) {
       as_destroy(newas);
       return ENOMEM;
@@ -154,7 +154,7 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
     // Copy the page table
     for (unsigned int j=0; j < pt_size; j++) {
       // Create a new page
-      old_page = array_get(old_seg->page_table, j);
+      old_page = ll_get(old_seg->page_table, j);
       new_page = kmalloc(sizeof(struct page_entry));
       if (new_page == NULL) {
         segment_destroy(new_seg);
@@ -188,10 +188,10 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
                (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);
       }
 
-      array_add(new_seg->page_table, new_page, NULL);
+      ll_add(new_seg->page_table, new_page, NULL);
     }
 
-    array_add(newas->segments_list, new_seg, NULL);
+    ll_add(newas->segments_list, new_seg, NULL);
 
   }
 
@@ -263,14 +263,14 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
   segment->executable = executable;
 
   // Initialize the page table
-  segment->page_table = array_create();
+  segment->page_table = ll_create();
   if (segment->page_table == NULL) {
     kfree(as);
     return ENOMEM;
   }
 
   // Add it to the array
-  int result = array_add(as->segments_list, (void *) segment, NULL);
+  int result = ll_add(as->segments_list, (void *) segment, NULL);
   if (result) {
     segment_destroy(segment);
     as_destroy(as);
@@ -334,17 +334,16 @@ void as_destroy(struct addrspace *as)
   struct segment_entry * segment;
 
   // Iterate through each of the segments
-  for (unsigned int i = 0; i < array_num(as->segments_list); i++) {
+  for (unsigned int i = 0; i < ll_num(as->segments_list); i++) {
 
     // Get the segment and then destroy it.
-    segment = (struct segment_entry *) array_get(as->segments_list, i);
+    segment = (struct segment_entry *) ll_get(as->segments_list, i);
     segment_destroy(segment);
 
   }
 
   // Destroy the array
-  array_setsize(as->segments_list, 0);
-  array_destroy(as->segments_list);
+  ll_destroy(as->segments_list);
 
   // Delete the addres sspace
   kfree(as);
@@ -361,10 +360,10 @@ void segment_destroy(struct segment_entry * segment) {
   }
 
   // Iterate over the page table and destroy each one
-  for (unsigned int i = 0; i < array_num(segment->page_table); i++) {
+  for (unsigned int i = 0; i < ll_num(segment->page_table); i++) {
 
     // Get each page and free it
-    struct page_entry * page = (struct page_entry *) array_get(segment->page_table, i);
+    struct page_entry * page = (struct page_entry *) ll_get(segment->page_table, i);
 
     if (page->swap_state == DISK) {
       bitmap_unmark(disk_bitmap, page->bitmap_disk_index);
@@ -378,8 +377,7 @@ void segment_destroy(struct segment_entry * segment) {
   }
 
   // Destroy the array
-  array_setsize(segment->page_table, 0);
-  array_destroy(segment->page_table);
+  ll_destroy(segment->page_table);
 
   // Free the segment
   kfree(segment);
