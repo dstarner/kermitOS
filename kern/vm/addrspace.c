@@ -150,6 +150,7 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
       // Create a new page
       old_page = ll_get(old_seg->page_table, j);
       new_page = kmalloc(sizeof(struct page_entry));
+      new_page->swap_lock = lock_create("swap_lock");
       if (new_page == NULL) {
         segment_destroy(new_seg);
         as_destroy(newas);
