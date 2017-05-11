@@ -309,7 +309,8 @@ int swap_in(struct page_entry * page) {
   // Try to swap in
   // kprintf("IN %x\n", page->vpage_n);
   if (vm_booted) spinlock_release(&coremap_lock);
-  int error = block_read(swap_in_bitmap_index, page->ppage_n);
+  paddr_t paddr = (page_to_evict * PAGE_SIZE) + coremap_pagestartaddr;
+  int error = block_read(swap_in_bitmap_index, paddr);
   if (vm_booted) spinlock_acquire(&coremap_lock);
   // kprintf("IN2 %x\n", page->vpage_n);
 
@@ -318,7 +319,9 @@ int swap_in(struct page_entry * page) {
   lock_release(bitmap_lock);
 
   coremap[page_to_evict].state = USER;
+  coremap[page_to_evict].owner = page;
   page->swap_state = MEMORY;
+  page->ppage_n = paddr;
   page->state = CLEAN;
 
   KASSERT(error == 0);
