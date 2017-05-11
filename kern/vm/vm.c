@@ -283,39 +283,46 @@ int block_write(unsigned int swap_disk_index, paddr_t read_from_paddr) {
 }
 
 int swap_in(struct page_entry * page) {
+  KASSERT(page->swap_state == DISK);
+
   if (vm_booted) spinlock_acquire(&coremap_lock);
 
-  //kprintf("%zu page found\n", select_page_to_evict());
-  struct page_entry * new_page = coremap[(unsigned long) select_page_to_evict()].owner;
-  if (coremap[(unsigned long) select_page_to_evict()].state != FREE) {
+  unsigned long page_to_evict = (unsigned long) select_page_to_evict();
 
+  //kprintf("%zu page found\n", select_page_to_evict());
+  struct page_entry * old_page = coremap[page_to_evict].owner;
+
+  // If the page selected to be evicted is not freed, that means we need to swap
+  // it out.
+  if (coremap[page_to_evict].state != FREE) {
     if (vm_booted) spinlock_release(&coremap_lock);
-    swap_out(new_page);
+    swap_out(old_page);
     if (vm_booted) spinlock_acquire(&coremap_lock);
   }
 
-  new_page->swap_state = MEMORY;
-  new_page->state = CLEAN;
-
-  unsigned int bitmap_index = page->bitmap_disk_index;
-  new_page->bitmap_disk_index = bitmap_index;
+  // Now that the page is swapped out, we can set up to swap in the page.
+  unsigned int swap_in_bitmap_index = page->bitmap_disk_index;
 
   // Make sure that it is actually in disk
-  KASSERT(bitmap_isset(disk_bitmap, bitmap_index));
-
-  lock_acquire(bitmap_lock);
-  bitmap_unmark(disk_bitmap, bitmap_index);
-  lock_release(bitmap_lock);
+  KASSERT(bitmap_isset(disk_bitmap, swap_in_bitmap_index));
 
   // Try to swap in
   // kprintf("IN %x\n", page->vpage_n);
   if (vm_booted) spinlock_release(&coremap_lock);
-  int error = block_read(bitmap_index, new_page->ppage_n);
+  int error = block_read(swap_in_bitmap_index, page->ppage_n);
   if (vm_booted) spinlock_acquire(&coremap_lock);
   // kprintf("IN2 %x\n", page->vpage_n);
 
+  lock_acquire(bitmap_lock);
+  bitmap_unmark(disk_bitmap, swap_in_bitmap_index);
+  lock_release(bitmap_lock);
+
+  coremap[page_to_evict].state = USER;
+  page->swap_state = MEMORY;
+  page->state = CLEAN;
+
   KASSERT(error == 0);
-  KASSERT(new_page->swap_state == MEMORY);
+  KASSERT(page->swap_state == MEMORY);
 
   if (vm_booted) spinlock_release(&coremap_lock);
 
