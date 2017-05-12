@@ -28,4 +28,8 @@ int ll_add(struct linkedlist * list, void * data, unsigned *index_ret);
 
 void ll_destroy(struct linkedlist *);
 
+void ll_clear_nodes(struct linkedlist *);
+
+void ll_setsize(struct linkedlist *, unsigned int);
+
 #endif

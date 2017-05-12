@@ -144,18 +144,18 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
       return ENOMEM;
     }
 
-
     // Copy the page table
     for (unsigned int j=0; j < pt_size; j++) {
       // Create a new page
       old_page = ll_get(old_seg->page_table, j);
       new_page = kmalloc(sizeof(struct page_entry));
-      new_page->swap_lock = lock_create("swap_lock");
       if (new_page == NULL) {
         segment_destroy(new_seg);
         as_destroy(newas);
         return ENOMEM;
       }
+
+      new_page->swap_lock = lock_create("swap_lock");
 
       // Copy over the virtual page info
       new_page->vpage_n = old_page->vpage_n;
@@ -247,6 +247,7 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 
   // Create the actual segment itself
   struct segment_entry * segment = kmalloc(sizeof(struct segment_entry));
+  KASSERT(segment);
 
   // Set the start and bounds for the segment
   segment->region_start = vaddr;
@@ -263,6 +264,9 @@ int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
     kfree(as);
     return ENOMEM;
   }
+
+  KASSERT(as);
+  KASSERT(as->segments_list);
 
   // Add it to the array
   int result = ll_add(as->segments_list, (void *) segment, NULL);
@@ -317,9 +321,7 @@ int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 
 /* Destroy an address space and all its segments */
-void as_destroy(struct addrspace *as)
-{
-
+void as_destroy(struct addrspace *as) {
   if (as == NULL) {return;}
 
   if (as->segments_list == NULL) {
@@ -338,6 +340,7 @@ void as_destroy(struct addrspace *as)
   }
 
   // Destroy the array
+  ll_setsize(as->segments_list, 0);
   ll_destroy(as->segments_list);
 
   // Delete the addres sspace
@@ -372,6 +375,7 @@ void segment_destroy(struct segment_entry * segment) {
   }
 
   // Destroy the array
+  ll_setsize(segment->page_table, 0);
   ll_destroy(segment->page_table);
 
   // Free the segment
