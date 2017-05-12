@@ -13,6 +13,7 @@
 #include <vfs.h>
 #include <copyinout.h>
 #include <kern/wait.h>
+#include <linkedlist.h>
 
 
 pid_t sys_getpid() {
@@ -468,9 +469,9 @@ void * sys_sbrk(intptr_t amt, int *err) {
     struct array * out_of_bounds_pages = array_create();
 
     // Iterate over the page table and destroy each one
-    for (unsigned int i = 0; i < array_num(seg->page_table); i++) {
+    for (unsigned int i = 0; i < ll_num(seg->page_table); i++) {
       // Get each page and free it
-      struct page_entry * page = (struct page_entry *) array_get(seg->page_table, i);
+      struct page_entry * page = (struct page_entry *) ll_get(seg->page_table, i);
 
       // Free all pages that have vaddrs that are greater than the new end range.
       if (page->vpage_n >= new_end_range) {
@@ -483,13 +484,13 @@ void * sys_sbrk(intptr_t amt, int *err) {
       unsigned int page_i = (unsigned int) array_get(out_of_bounds_pages, i - 1);
       // kprintf("for i %u -> page_i %u\n", i, page_i);
 
-      struct page_entry * page = (struct page_entry *) array_get(seg->page_table, page_i);
+      struct page_entry * page = (struct page_entry *) ll_get(seg->page_table, page_i);
 
       // kprintf("freeing paddr %x, ", page->ppage_n);
       // kprintf("freeing vaddr %x\n", page->vpage_n);
       freeppage(page->ppage_n);
       kfree(page);
-      array_remove(seg->page_table, page_i);
+      ll_remove(seg->page_table, page_i);
     }
 
     // Clean up the data structure after.
@@ -517,10 +518,10 @@ struct segment_entry * find_heap_segment() {
   KASSERT(curproc != NULL);
 
   // Find the heap segment that is part of the segments list in the current proc
-  struct array * segs = curproc->p_addrspace->segments_list;
+  struct linkedlist * segs = curproc->p_addrspace->segments_list;
   unsigned int i;
-  for (i = 0; i < array_num(segs); i++) {
-    struct segment_entry * seg = array_get(segs, i);
+  for (i = 0; i < ll_num(segs); i++) {
+    struct segment_entry * seg = ll_get(segs, i);
     if (seg->isHeap) return seg;
   }
 

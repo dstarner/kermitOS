@@ -30,6 +30,8 @@ void ll_destroy(struct linkedlist *);
 
 void ll_clear_nodes(struct linkedlist *);
 
+void ll_remove(struct linkedlist * list, unsigned int index);
+
 void ll_setsize(struct linkedlist *, unsigned int);
 
 #endif

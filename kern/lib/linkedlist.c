@@ -86,3 +86,33 @@ void ll_destroy(struct linkedlist * list) {
 void ll_setsize(struct linkedlist * list, unsigned int size) {
   list->size = size;
 }
+
+void ll_remove(struct linkedlist * list, unsigned int index) {
+  if (list->size < index) return;
+
+  struct linkedlist_node * current = list->head;
+
+  // If removing head
+  if (index == 0) {
+    list->head = current->next;
+    kfree(current);
+    return;
+  }
+
+  // Get the previous node
+  for (unsigned int i=0; current !=NULL && i < index-1; i++)
+    current = current->next;
+
+  if (current == NULL || current->next == NULL)
+    return;
+
+  // Node temp->next is the node to be deleted
+  // Store pointer to the next of node to be deleted
+  struct linkedlist_node *next = current->next->next;
+
+  // Unlink the node from linked list
+  kfree(current->next);  // Free memory
+
+  current->next = next;  // Unlink the deleted node from list
+
+}
