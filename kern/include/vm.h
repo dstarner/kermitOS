@@ -129,4 +129,6 @@ uint32_t select_page_to_evict(void);
 uint32_t select_page_to_evict_random(void);
 uint32_t select_page_to_evict_clock_lru(void);
 
+void delete_page_from_page_table(unsigned long);
+
 #endif /* _VM_H_ */

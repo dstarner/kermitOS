@@ -575,6 +575,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
 
         set_page_owner(page, paddr);
         ll_add(seg->page_table, page, NULL);
+
       } else {
 
         paddr = page->ppage_n;
@@ -667,9 +668,17 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
   unsigned int i;
   for (i = 0; i < ll_num(pages); i++) {
     struct page_entry * page = ll_get(pages, i);
+    if (page == NULL) {
+      for (unsigned int j = 0; j < ll_num(pages); j++) {
+        struct page_entry * page = ll_get(pages, j);
+        if (page == NULL)kprintf("?\n");else kprintf("X\n");
+      }
+    }
 
     // WHY IS THIS CAUSING THE WHOLE PROGRAM TO CRASH
+    // the page is not being removed from te page table right now
     KASSERT(page != NULL);
+    // if (page == NULL) continue;
     // if (page->vpage_n == 0) continue;
 
     if (((vaddr_t) (page->vpage_n)) == vaddr) {
@@ -805,7 +814,13 @@ void freeppage(paddr_t paddr) {
   // Free it
   coremap[page_num].state = FREE;
   coremap[page_num].block_size = 0;
-  // set_page_owner(NULL, paddr);
+  delete_page_from_page_table(page_num);
+
+  struct page_entry * page = coremap[page_num].owner;
+  if (page->swap_lock != NULL) lock_destroy(page->swap_lock);
+  // kfree(page);
+
+  coremap[page_num].owner = NULL;
 
   // If booted, then be atomic
   if (vm_booted) {
@@ -836,11 +851,50 @@ void free_kpages(vaddr_t addr) {
   for (unsigned long offset = 0; offset < blocks; offset++) {
     coremap[page_num + offset].state = FREE;
     coremap[page_num + offset].block_size = 0;
+    delete_page_from_page_table(page_num + offset);
+
+    struct page_entry * page = coremap[page_num + offset].owner;
+    if (page->swap_lock != NULL) lock_destroy(page->swap_lock);
+    // kfree(page);
+
+    coremap[page_num].owner = NULL;
+
   }
 
   // If booted, then be atomic
   if (vm_booted) {
     spinlock_release(&coremap_lock);
+  }
+
+}
+
+void delete_page_from_page_table(unsigned long index) {
+  struct addrspace * as = proc_getas();
+  if (as == NULL) return;
+
+  if (coremap[index].owner == NULL) {
+        return;
+      }
+
+  vaddr_t vaddr = coremap[index].owner->vpage_n;
+
+  // Iterate the array to find if there is a match.
+  struct linkedlist * segs = as->segments_list;
+  unsigned int i;
+  for (i = 0; i < ll_num(segs); i++) {
+    struct segment_entry * seg = ll_get(segs, i);
+    if (seg->region_start <= vaddr &&
+        seg->region_start + seg->region_size > vaddr) {
+
+      // Find the page index.
+      struct linkedlist * pages = seg->page_table;
+      for (unsigned int page_num = 0; page_num < ll_num(pages); page_num++) {
+        if (coremap[index].owner == ll_get(pages, page_num)) {
+          ll_remove(pages, page_num);
+          return;
+        }
+      }
+    }
   }
 
 }
