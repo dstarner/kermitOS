@@ -370,7 +370,7 @@ void segment_destroy(struct segment_entry * segment) {
     }
 
     // Free the page, and then free the actual structure
-    lock_destroy(page->swap_lock);
+    if (page->swap_lock != NULL) lock_destroy(page->swap_lock);
     kfree(page);
   }
 

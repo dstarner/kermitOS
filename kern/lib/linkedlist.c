@@ -6,6 +6,10 @@
 
 struct linkedlist * ll_create() {
   struct linkedlist * list = kmalloc(sizeof(struct linkedlist));
+  if (list == NULL) {
+    return NULL;
+  }
+  
   list->size = 0;
   list->head = NULL;
   return list;
