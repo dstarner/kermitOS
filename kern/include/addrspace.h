@@ -65,7 +65,7 @@ struct segment_entry {
     // Size of the region
     size_t region_size;
     // Page table for the heap
-    struct linkedlist * page_table;
+    struct array * page_table;
 
     // What type of segment is this?
     int readable;
@@ -95,7 +95,7 @@ struct addrspace {
 #else
 
   // The segments this address space has
-  struct linkedlist * segments_list;
+  struct array * segments_list;
 
 #endif
 };

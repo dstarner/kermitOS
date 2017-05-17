@@ -470,9 +470,9 @@ void * sys_sbrk(intptr_t amt, int *err) {
     struct array * out_of_bounds_pages = array_create();
 
     // Iterate over the page table and destroy each one
-    for (unsigned int i = 0; i < ll_num(seg->page_table); i++) {
+    for (unsigned int i = 0; i < array_num(seg->page_table); i++) {
       // Get each page and free it
-      struct page_entry * page = (struct page_entry *) ll_get(seg->page_table, i);
+      struct page_entry * page = (struct page_entry *) array_get(seg->page_table, i);
 
       // Free all pages that have vaddrs that are greater than the new end range.
       if (page == NULL || page->vpage_n >= new_end_range) {
@@ -485,7 +485,7 @@ void * sys_sbrk(intptr_t amt, int *err) {
       unsigned int page_i = (unsigned int) array_get(out_of_bounds_pages, i - 1);
       // kprintf("for i %u -> page_i %u\n", i, page_i);
 
-      struct page_entry * page = (struct page_entry *) ll_get(seg->page_table, page_i);
+      struct page_entry * page = (struct page_entry *) array_get(seg->page_table, page_i);
 
       // kprintf("freeing paddr %x, ", page->ppage_n);
       // kprintf("freeing vaddr %x\n", page->vpage_n);
@@ -502,13 +502,13 @@ void * sys_sbrk(intptr_t amt, int *err) {
 
       kfree(page);
       page = NULL;
-      ll_remove(seg->page_table, page_i);
+      array_remove(seg->page_table, page_i);
     }
 
-    for (unsigned int j = 0; j < ll_num(seg->page_table); j++) {
-      struct page_entry * page = ll_get(seg->page_table, j);
-      if (page == NULL)kprintf("?\n");else kprintf("X\n");
-    }
+    //for (unsigned int j = 0; j < array_num(seg->page_table); j++) {
+    //  struct page_entry * page = array_get(seg->page_table, j);
+      //if (page == NULL)kprintf("?\n");else kprintf("X\n");
+    //}
 
     // Clean up the data structure after.
     array_setsize(out_of_bounds_pages, 0);
@@ -536,10 +536,10 @@ struct segment_entry * find_heap_segment() {
   KASSERT(curproc != NULL);
 
   // Find the heap segment that is part of the segments list in the current proc
-  struct linkedlist * segs = curproc->p_addrspace->segments_list;
+  struct array * segs = curproc->p_addrspace->segments_list;
   unsigned int i;
-  for (i = 0; i < ll_num(segs); i++) {
-    struct segment_entry * seg = ll_get(segs, i);
+  for (i = 0; i < array_num(segs); i++) {
+    struct segment_entry * seg = array_get(segs, i);
     if (seg->isHeap) return seg;
   }
 

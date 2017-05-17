@@ -491,8 +491,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
     //
     // as = proc_getas();
     //
-    // for (unsigned int i=0; i < ll_num(as->segments_list); i++) {
-    //   struct segment_entry * seg = ll_get(as->segments_list, i);
+    // for (unsigned int i=0; i < array_num(as->segments_list); i++) {
+    //   struct segment_entry * seg = array_get(as->segments_list, i);
     //   if (seg->executable) {kprintf("CODE/TEXT: Executable, ");}
     //   if (seg->writeable) {kprintf("Writeable, ");}
     //   if (seg->readable) {kprintf("Readable, ");}
@@ -541,7 +541,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->lru_used = false;
 
         set_page_owner(page, paddr);
-        ll_add(seg->page_table, page, NULL);
+        array_add(seg->page_table, page, NULL);
       }
 
       paddr = page->ppage_n;
@@ -575,7 +575,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->lru_used = false;
 
         set_page_owner(page, paddr);
-        ll_add(seg->page_table, page, NULL);
+        array_add(seg->page_table, page, NULL);
 
       } else {
 
@@ -640,10 +640,10 @@ struct segment_entry * find_segment_from_vaddr(vaddr_t vaddr) {
   KASSERT(as != NULL);
 
   // Iterate the array to find if there is a match.
-  struct linkedlist * segs = as->segments_list;
+  struct array * segs = as->segments_list;
   unsigned int i;
-  for (i = 0; i < ll_num(segs); i++) {
-    struct segment_entry * seg = ll_get(segs, i);
+  for (i = 0; i < array_num(segs); i++) {
+    struct segment_entry * seg = array_get(segs, i);
     if (seg->region_start <= vaddr &&
         seg->region_start + seg->region_size > vaddr) {
       return seg;
@@ -663,19 +663,19 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
   KASSERT(curproc != NULL);
   KASSERT(seg != NULL);
   // Iterate the array to find if there is a match.
-  struct linkedlist * pages = seg->page_table;
+  struct array * pages = seg->page_table;
   KASSERT(pages != NULL);
 
   unsigned int i;
-  for (i = 0; i < ll_num(pages); i++) {
-    struct page_entry * page = ll_get(pages, i);
+  for (i = 0; i < array_num(pages); i++) {
+    struct page_entry * page = array_get(pages, i);
 
-    if (page == NULL) {
-      for (unsigned int j = 0; j < ll_num(pages); j++) {
-        struct page_entry * page = ll_get(pages, j);
-        if (page == NULL)kprintf("?\n");else kprintf("X\n");
-      }
-    }
+    //if (page == NULL) {
+    //  for (unsigned int j = 0; j < array_num(pages); j++) {
+    //    struct page_entry * page = array_get(pages, j);
+        //if (page == NULL)kprintf("?\n");else kprintf("X\n");
+    //  }
+    //}
 
     // WHY IS THIS CAUSING THE WHOLE PROGRAM TO CRASH
     // the page is not being removed from te page table right now
@@ -816,10 +816,10 @@ void freeppage(paddr_t paddr) {
   // Free it
   coremap[page_num].state = FREE;
   coremap[page_num].block_size = 0;
-  delete_page_from_page_table(page_num);
+  //delete_page_from_page_table(page_num);
 
   // kfree(page);
-  delete_page_from_page_table(page_num);
+  //delete_page_from_page_table(page_num);
 
   coremap[page_num].owner = NULL;
 
@@ -879,18 +879,18 @@ void delete_page_from_page_table(unsigned long index) {
   vaddr_t vaddr = coremap[index].owner->vpage_n;
 
   // Iterate the array to find if there is a match.
-  struct linkedlist * segs = as->segments_list;
+  struct array * segs = as->segments_list;
   unsigned int i;
-  for (i = 0; i < ll_num(segs); i++) {
-    struct segment_entry * seg = ll_get(segs, i);
+  for (i = 0; i < array_num(segs); i++) {
+    struct segment_entry * seg = array_get(segs, i);
     if (seg->region_start <= vaddr &&
         seg->region_start + seg->region_size > vaddr) {
 
       // Find the page index.
-      struct linkedlist * pages = seg->page_table;
-      for (unsigned int page_num = 0; page_num < ll_num(pages); page_num++) {
-        if (coremap[index].owner == ll_get(pages, page_num)) {
-          ll_remove(pages, page_num);
+      struct array * pages = seg->page_table;
+      for (unsigned int page_num = 0; page_num < array_num(pages); page_num++) {
+        if (coremap[index].owner == array_get(pages, page_num)) {
+          array_remove(pages, page_num);
           return;
         }
       }

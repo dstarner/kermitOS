@@ -9,7 +9,7 @@ struct linkedlist * ll_create() {
   if (list == NULL) {
     return NULL;
   }
-  
+
   list->size = 0;
   list->head = NULL;
   return list;
@@ -100,6 +100,7 @@ void ll_remove(struct linkedlist * list, unsigned int index) {
   if (index == 0) {
     list->head = current->next;
     kfree(current);
+    list->size--;
     return;
   }
 
@@ -118,5 +119,5 @@ void ll_remove(struct linkedlist * list, unsigned int index) {
   kfree(current->next);  // Free memory
 
   current->next = next;  // Unlink the deleted node from list
-
+  list->size--;
 }
