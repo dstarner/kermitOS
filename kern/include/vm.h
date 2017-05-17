@@ -53,6 +53,12 @@ paddr_t coremap_startaddr;
 // Starting address for the coremap physically pages
 paddr_t coremap_pagestartaddr;
 
+struct vnode * swap_vnode;
+struct bitmap * disk_bitmap;
+struct lock * bitmap_lock;
+bool can_swap;
+unsigned long swap_disk_pages;
+
 // The number of pages in the coremap
 unsigned int COREMAP_PAGES;
 unsigned int current_page;
