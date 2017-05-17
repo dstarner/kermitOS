@@ -100,6 +100,8 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
 {
   struct addrspace *newas;
 
+  kprintf("COPYING\n");
+
   newas = as_create(false);
   if (newas==NULL) {
     return ENOMEM;
@@ -137,6 +139,11 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
     new_seg->executable = old_seg->executable;
     new_seg->isHeap = old_seg->isHeap;
 
+    if (new_seg->executable) {kprintf("CODE/TEXT: Executable, ");}
+    if (new_seg->writeable) {kprintf("Writeable, ");}
+    if (new_seg->readable) {kprintf("Readable, ");}
+    kprintf("0x%x --> 0x%x\n", new_seg->region_start, new_seg->region_start + new_seg->region_size);
+
     unsigned int pt_size = ll_num(old_seg->page_table);
     new_seg->page_table = ll_create();
     if (new_seg->page_table == NULL) {
@@ -172,6 +179,7 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
 
       // Check if the old page is on disk:
       if (old_page->swap_state == DISK) {
+        kprintf("AH!");
         swap_in(old_page);
         memmove((void *)PADDR_TO_KVADDR(new_page->ppage_n),
                (const void *)PADDR_TO_KVADDR(old_page->ppage_n), PAGE_SIZE);

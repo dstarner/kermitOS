@@ -333,6 +333,7 @@ int swap_in(struct page_entry * page) {
 }
 
 int swap_out(struct page_entry * page) {
+  KASSERT(page != NULL);
   KASSERT(page->swap_state == MEMORY);
   // kprintf("Swapping out...\n");
 
@@ -358,6 +359,8 @@ int swap_out(struct page_entry * page) {
   int error = block_write(bitmap_index, page->ppage_n);
   if (vm_booted) spinlock_acquire(&coremap_lock);
   // freeppage(page->ppage_n);
+
+  page->swap_state = DISK;
 
   // Zero the page
   as_zero_region(page->ppage_n, 1);
@@ -765,23 +768,23 @@ paddr_t getppages(unsigned long npages, bool isKernel) {
   }
 
   // // If not enough pages are found, swapout!
-  // uint32_t random_page = select_page_to_evict();
+   uint32_t random_page = select_page_to_evict();
   //
   // // If booted, then be atomic
-  // if (vm_booted) spinlock_release(&coremap_lock);
-  // int error = swap_out(coremap[random_page].owner);
-  // if (vm_booted) spinlock_acquire(&coremap_lock);
+   if (vm_booted) spinlock_release(&coremap_lock);
+   int error = swap_out(coremap[random_page].owner);
+   if (vm_booted) spinlock_acquire(&coremap_lock);
   //
   // // Fix the page if the page is created as a kernel page.
-  // if (isKernel) coremap[random_page].state = KERNEL;
+   if (isKernel) coremap[random_page].state = KERNEL;
   //
-  // KASSERT(error == 0);
-  // paddr_t paddr = (random_page * PAGE_SIZE) + coremap_pagestartaddr;
-  // KASSERT(can_swap);
+   KASSERT(error == 0);
+   paddr_t paddr = (random_page * PAGE_SIZE) + coremap_pagestartaddr;
+   KASSERT(can_swap);
   if (vm_booted) spinlock_release(&coremap_lock);
   //
-  // return paddr;
-  return 0;
+   return paddr;
+  //return 0;
 }
 
 
