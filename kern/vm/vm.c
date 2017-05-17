@@ -536,7 +536,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
         page->lru_used = false;
-        page->swap_lock = lock_create("swap_lock");
 
         set_page_owner(page, paddr);
         ll_add(seg->page_table, page, NULL);
@@ -571,7 +570,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress) {
         page->bitmap_disk_index = 0;
         page->swap_state = MEMORY;
         page->lru_used = false;
-        page->swap_lock = lock_create("swap_lock");
 
         set_page_owner(page, paddr);
         ll_add(seg->page_table, page, NULL);
@@ -668,6 +666,7 @@ struct page_entry * find_page_on_segment(struct segment_entry * seg, vaddr_t vad
   unsigned int i;
   for (i = 0; i < ll_num(pages); i++) {
     struct page_entry * page = ll_get(pages, i);
+
     if (page == NULL) {
       for (unsigned int j = 0; j < ll_num(pages); j++) {
         struct page_entry * page = ll_get(pages, j);
@@ -816,9 +815,8 @@ void freeppage(paddr_t paddr) {
   coremap[page_num].block_size = 0;
   delete_page_from_page_table(page_num);
 
-  struct page_entry * page = coremap[page_num].owner;
-  if (page->swap_lock != NULL) lock_destroy(page->swap_lock);
   // kfree(page);
+  delete_page_from_page_table(page_num);
 
   coremap[page_num].owner = NULL;
 
@@ -853,9 +851,8 @@ void free_kpages(vaddr_t addr) {
     coremap[page_num + offset].block_size = 0;
     delete_page_from_page_table(page_num + offset);
 
-    struct page_entry * page = coremap[page_num + offset].owner;
-    if (page->swap_lock != NULL) lock_destroy(page->swap_lock);
     // kfree(page);
+    delete_page_from_page_table(page_num + offset);
 
     coremap[page_num].owner = NULL;
 

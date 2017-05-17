@@ -155,8 +155,6 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
         return ENOMEM;
       }
 
-      new_page->swap_lock = lock_create("swap_lock");
-
       // Copy over the virtual page info
       new_page->vpage_n = old_page->vpage_n;
 
@@ -336,12 +334,12 @@ void as_destroy(struct addrspace *as) {
     // Get the segment and then destroy it.
     segment = (struct segment_entry *) ll_get(as->segments_list, i);
     segment_destroy(segment);
-
   }
 
   // Destroy the array
   ll_setsize(as->segments_list, 0);
   ll_destroy(as->segments_list);
+  as->segments_list = NULL;
 
   // Delete the addres sspace
   kfree(as);
@@ -364,14 +362,16 @@ void segment_destroy(struct segment_entry * segment) {
     struct page_entry * page = (struct page_entry *) ll_get(segment->page_table, i);
 
     if (page->swap_state == DISK) {
+      lock_acquire(bitmap_lock);
       bitmap_unmark(disk_bitmap, page->bitmap_disk_index);
+      lock_release(bitmap_lock);
     } else {
       freeppage(page->ppage_n);
     }
 
     // Free the page, and then free the actual structure
-    if (page->swap_lock != NULL) lock_destroy(page->swap_lock);
     kfree(page);
+    page = NULL;
   }
 
   // Destroy the array
@@ -380,5 +380,6 @@ void segment_destroy(struct segment_entry * segment) {
 
   // Free the segment
   kfree(segment);
+  segment = NULL;
 
 }

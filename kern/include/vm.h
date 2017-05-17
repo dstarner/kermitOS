@@ -43,7 +43,8 @@ struct coremap_page {
     enum stateEnum {FREE, KERNEL, USER} state;
 
     struct page_entry * owner;
-
+    struct lock * swap_lock;
+    
     // Series of blocks following this page:
     unsigned long block_size;
 };

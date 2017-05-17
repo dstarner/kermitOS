@@ -57,8 +57,6 @@ struct page_entry {
   unsigned int bitmap_disk_index;
   bool lru_used;
 
-  struct lock * swap_lock;
-
 };
 
 struct segment_entry {

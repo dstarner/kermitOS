@@ -14,6 +14,7 @@
 #include <copyinout.h>
 #include <kern/wait.h>
 #include <linkedlist.h>
+#include <bitmap.h>
 
 
 pid_t sys_getpid() {
@@ -474,7 +475,7 @@ void * sys_sbrk(intptr_t amt, int *err) {
       struct page_entry * page = (struct page_entry *) ll_get(seg->page_table, i);
 
       // Free all pages that have vaddrs that are greater than the new end range.
-      if (page->vpage_n >= new_end_range) {
+      if (page == NULL || page->vpage_n >= new_end_range) {
         // kprintf("found page to evict at i %u\n", i);
         array_add(out_of_bounds_pages, (void *) i, NULL);
       }
@@ -488,14 +489,31 @@ void * sys_sbrk(intptr_t amt, int *err) {
 
       // kprintf("freeing paddr %x, ", page->ppage_n);
       // kprintf("freeing vaddr %x\n", page->vpage_n);
-      freeppage(page->ppage_n);
+      if (page != NULL) {
+        if (page->swap_state == MEMORY) {
+          freeppage(page->ppage_n);
+        } else {
+          // Prevent any other processes trying to write to the same block.
+          lock_acquire(bitmap_lock);
+          bitmap_unmark(disk_bitmap, page->bitmap_disk_index);
+          lock_release(bitmap_lock);
+        }
+      }
+
       kfree(page);
+      page = NULL;
       ll_remove(seg->page_table, page_i);
+    }
+
+    for (unsigned int j = 0; j < ll_num(seg->page_table); j++) {
+      struct page_entry * page = ll_get(seg->page_table, j);
+      if (page == NULL)kprintf("?\n");else kprintf("X\n");
     }
 
     // Clean up the data structure after.
     array_setsize(out_of_bounds_pages, 0);
     array_destroy(out_of_bounds_pages);
+    out_of_bounds_pages = NULL;
 
     // Remove invalid TLB entries
     // TODO: Only remove the invalid ones
